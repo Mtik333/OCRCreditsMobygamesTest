@@ -78,9 +78,24 @@ public class NameModelHelper {
             for (int y = 0; y < inputFile.getHeight(); y++) {
                 int rgba = inputFile.getRGB(x, y);
                 Color col = new Color(rgba, true);
-                col = new Color(255 - col.getRed(),
-                        255 - col.getGreen(),
-                        255 - col.getBlue());
+//                int red = col.getRed();
+//                int green = col.getGreen();
+//                int blue = col.getBlue();
+                //invert image
+                int red = 255 - col.getRed();
+                int green = 255 - col.getGreen();
+                int blue = 255 - col.getBlue();
+//                col = new Color(red,green,blue);
+                //grayscale
+                red = (int)(red * 0.299);
+                green = (int)(green * 0.587);
+                blue = (int)(blue *0.114);
+//                //invert image
+//                red = 255 - red;
+//                green = 255 - green;
+//                blue = 255 - blue;
+//                col = new Color(red,green,blue);
+                col = new Color(red+green+blue, red+green+blue,red+green+blue);
                 inputFile.setRGB(x, y, col.getRGB());
             }
         }

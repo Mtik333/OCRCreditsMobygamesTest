@@ -43,8 +43,11 @@
             <option value="3" selected="true">3 - Default, based on what is available</option>
         </select>
         <br>
-        <input type="checkbox" id="blackBgr" value="black" checked>Dark background and white font?
-        <input type="checkbox" id="groupItAll" value="black" checked>Try to group/fix output automatically? (barely developed)
+        <input type="checkbox" id="blackBgr" value="black" checked>Dark background and white font
+        <br>
+        <input type="checkbox" id="groupItAll" value="black" checked>Try to group/fix output automatically (barely developed)
+        <br>
+        <input type="checkbox" id="replaceComma" value="black" checked>Replace comma with new line
         <br>
         <select id="previewResolution">
             <option value="0" selected="true">Original resolution</option>
@@ -211,6 +214,7 @@
             }
             formData.append('pageSegMode', $("#pageSegModeGlobal")[0].value);
             formData.append('ocrEngineMode', $("#ocrEngineModeGlobal")[0].value);
+            formData.append('roleDevLayout', $("#roleDevLayout")[0].value);
             if ($("#blackBgr")[0].checked) {
                 formData.append('black', true);
             } else {
@@ -294,6 +298,7 @@
             }
             formData.append('pageSegMode', $("#pageSegModeGlobal")[0].value);
             formData.append('ocrEngineMode', $("#ocrEngineModeGlobal")[0].value);
+            formData.append('roleDevLayout', $("#roleDevLayout")[0].value);
             if ($("#blackBgr")[0].checked) {
                 formData.append('black', true);
             } else {

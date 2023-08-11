@@ -45,7 +45,9 @@ public class GreetingController {
                                      @RequestParam(value = "tempPropY", required = false) String propY,
                                      @RequestParam(value = "tempPropW", required = false) String propW,
                                      @RequestParam(value = "tempPropH", required = false) String propH,
-                                     @RequestParam(value = "black") boolean isBlack) throws IOException, TesseractException {
+                                     @RequestParam(value = "black") boolean isBlack,
+                                                 @RequestParam(value = "roleDevLayout") Integer roleDevLayout)
+            throws IOException, TesseractException {
         System.out.println("???????????????");
         Rectangle rectangle = null;
         if (propX != null) {
@@ -83,7 +85,12 @@ public class GreetingController {
             String result3 = NameModelHelper.replaceSomeCharacters(result2);
             resultsPerFile.put(path, result3);
         }
-        Map<String,String> allResults = MobygamesHelper.reworkResult(resultsPerFile);
+        Map<String,String> allResults=null;
+        if (roleDevLayout==0){
+            allResults = MobygamesHelper.reworkResultDevUnder(resultsPerFile);
+        } else if (roleDevLayout==1){
+            allResults = MobygamesHelper.reworkResultDevNext(resultsPerFile);
+        }
         return allResults;
     }
 
@@ -97,7 +104,8 @@ public class GreetingController {
                                    @RequestParam(value = "tempPropY", required = false) String propY,
                                    @RequestParam(value = "tempPropW", required = false) String propW,
                                    @RequestParam(value = "tempPropH", required = false) String propH,
-                                   @RequestParam(value = "black") boolean isBlack
+                                   @RequestParam(value = "black") boolean isBlack,
+                                   @RequestParam(value = "roleDevLayout") Integer roleDevLayout
     )
 
             throws IOException, TesseractException {
@@ -122,8 +130,16 @@ public class GreetingController {
         //we don't really want to have more than 2 \n going on
         String result2 = result.replaceAll("\n\n\n+", "\n\n");
         String result3 = NameModelHelper.replaceSomeCharacters(result2);
-        NameModelHelper.analyzeSentence(result);
-        return HtmlEncoder.encode(result3);
+        Map<Path, String> resultsPerFile = new TreeMap<>();
+        resultsPerFile.put(pathToFile,result3);
+        Map<String,String> allResults=null;
+        if (roleDevLayout==0){
+            allResults = MobygamesHelper.reworkResultDevUnder(resultsPerFile);
+        } else if (roleDevLayout==1){
+            allResults = MobygamesHelper.reworkResultDevNext(resultsPerFile);
+        }
+//        NameModelHelper.analyzeSentence(result);
+        return allResults.get(pathToFile);
     }
 
     @PostMapping("/inittestupload")
