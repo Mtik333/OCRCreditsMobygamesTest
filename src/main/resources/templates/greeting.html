@@ -1,0 +1,450 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <title>Credits OCR Test</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-jcrop/0.9.15/css/jquery.Jcrop.min.css"
+        integrity="sha512-bbAsdySYlqC/kxg7Id5vEUVWy3nOfYKzVHCKDFgiT+GsHG/3MD7ywtJnJNSgw++HBc+w4j71MLiaeVm1XY5KDQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous"> -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-jcrop/0.9.15/js/jquery.Jcrop.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/jcrop/dist/jcrop.css">
+    <script src="https://unpkg.com/jcrop"></script>
+</head>
+
+<body>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js" integrity="sha384-HwwvtgBNo3bZJJLYd8oVXjrBZt8cqVSpeBNS5n7C8IVInixGAoxmnlMuBnhbgrkm" crossorigin="anonymous"></script> -->
+    <div class="container">
+        <!-- Input element to choose images -->
+        <h3>Some lame OCR wannabe for credits submissions</h3>
+        <h4>Try to name images like out001, out002, out003 etc.</h4>
+        <input type="file" id="select-image" multiple>
+        <select id="pageSegModeGlobal">
+            <option value="0">Orientation and script detection (OSD) only</option>
+            <option value="1">Automatic page segmentation with OSD</option>
+            <option value="2">Automatic page segmentation, but no OSD, or OCR. (not implemented)</option>
+            <option value="3" selected="true">Fully automatic page segmentation, but no OSD. (Default)</option>
+            <option value="4">Assume a single column of text of variable sizes.</option>
+            <option value="5">Assume a single uniform block of vertically aligned text</option>
+            <option value="6">Assume a single uniform block of text</option>
+            <option value="7">Treat the image as a single text line</option>
+            <option value="8">Treat the image as a single word</option>
+            <option value="9">Treat the image as a single word in a circle</option>
+            <option value="10">Treat the image as a single character</option>
+            <option value="11">Sparse text. Find as much text as possible in no particular order</option>
+            <option value="12">Sparse text with OSD.</option>
+        </select>
+        <select id="ocrEngineModeGlobal">
+            <option value="0">0 - Legacy engine only</option>
+            <option value="1">1 - Neural nets LSTM engine only</option>
+            <option value="2">2 - Legacy + LSTM engines</option>
+            <option value="3" selected="true">3 - Default, based on what is available</option>
+        </select>
+        <br>
+        <input type="checkbox" id="blackBgr" value="black" checked>Dark background and white font?
+        <input type="checkbox" id="groupItAll" value="black" checked>Try to group/fix output automatically? (barely developed)
+        <br>
+        <select id="previewResolution">
+            <option value="0" selected="true">Original resolution</option>
+            <option value="1">640x480</option>
+            <option value="2">800x600</option>
+            <option value="3">1024x768</option>
+            <option value="4">1280x720</option>
+            <option value="5">1440x900</option>
+            <option value="6">1920x1080</option>
+        </select>
+        <select id="roleDevLayout" onchange="adjustOcrMode()">
+            <option value="0">0 - Dev name(s) below role title</option>
+            <option value="1">1 - Dev names next to (right) role title</option>
+            <option value="2">2 - Other</option>
+        </select>
+        <button id="scanAllId" disabled>OCR all images</button>
+        <br>
+        <button id="showCombinedText" disabled>Show combined text</button>
+        <button id="hideCombinedText" disabled>Hide combined text</button>
+        <button id="copyCombinedText" disabled>Copy combined text</button>
+        <button id="scrapAll">Delete all images</button>
+        <button id="copyCrop" disabled>Copy crop to all images</button>
+        <p id="combinedText" hidden="true"></p>
+        <div class="preview_image">
+
+            <!-- All images will display inside this div -->
+            <div id="images">
+                <table id="temptable">
+                    <tr>
+                        <th>Image</th>
+                        <th>Text</th>
+                    </tr>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script>
+        var allImageFiles;
+        $(document).ready(function () {
+            const fileInput = document.getElementById('select-image');
+            const images = document.getElementById('images');
+            const temptable = document.getElementById('temptable');
+            $("#scanAllId").on('click', function () {
+                //ocrAllImages();
+                ocrAllImagesDup();
+            });
+            $("#showCombinedText").on('click', function () {
+                combineWholeText();
+            });
+            $("#hideCombinedText").on('click', function () {
+                hideWholeText();
+            });
+            $("#copyCombinedText").on('click', function () {
+                copyWholeText();
+            });
+            $("#scrapAll").on('click', function () {
+                $("#temptable tr").remove();
+                $("#select-image")
+                fileInput.value = "";
+                $.ajax({
+                    type: "POST",
+                    url: "/cleandir",
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        console.log("EEEEE1");
+                    },
+                    error: function (data2) {
+                        console.log(data2);
+                    }
+                });
+            });
+            // Listen to the change event on the <input> element
+            fileInput.addEventListener('change', (event) => {
+                // Get the selected image file
+                const imageFiles = event.target.files;
+                allImageFiles = imageFiles;
+                // Show the number of images selected
+                // Empty the images div
+                $("#temptable tr").remove();
+                $("#combinedText")[0].innerHTML = '';
+                if (imageFiles.length > 0) {
+                    $("#scanAllId").prop('disabled', false);
+                    $("#showCombinedText").prop('disabled', false);
+                    sendImagesToBackend(imageFiles);
+                    Array.prototype.forEach.call(imageFiles, function (file) {
+                        if (file.type.indexOf('image/' === 0)) {
+                            var i = new Image();
+                            var imageFileWithExtension = file.name;
+                            i.id = imageFileWithExtension.substr(0, imageFileWithExtension.indexOf("."));
+                            i.className = "imageToCrop";
+                            i.name = imageFileWithExtension;
+                            i.src = URL.createObjectURL(file);  // creates a blobURI
+                            //images.innerHTML += `<div class="image_box">`;
+                            //i.width=640;
+                            //i.height=480;
+                            addTrWithImageToTable(temptable, i);
+                            //images.appendChild(i);
+                            //$(images).append(imageFileWithExtension);
+                            //setTimeout(1000);
+                            Jcrop.load(i).then(img => {
+                                var stage = Jcrop.attach(img, {
+                                    onRelease: finalCoordinates
+                                });
+                                img.stage = stage;
+                                stage.listen('crop.change', (widget, e) => {
+                                    finalCoordinates(widget, e);
+                                });
+                            }
+                            );
+                        }
+                    });
+                } else {
+                    $("#scanAllId").prop('disabled', true);
+                    // Empty the images div
+                    //images.innerHTML = '';
+                }
+            });
+        });
+
+        function sendImagesToBackend(targetFiles) {
+            var formData = new FormData();
+            if ($("#blackBgr")[0].checked) {
+                formData.append('black', true);
+            } else {
+                formData.append('black', false);
+            }
+            Array.prototype.forEach.call(targetFiles, function (file) {
+                formData.append('files', file);
+            });
+            //formData.append('files', targetFiles);
+            $.ajax({
+                type: "POST",
+                url: "/inittestupload",
+                contentType: false,
+                processData: false,
+                data: formData,
+                success: function (data) {
+                    console.log("EEEEE1");
+                    // var tr = $('#' + buttonId)[0].parentElement.parentElement.parentElement;
+                    // var td1 = document.createElement('td');
+                    // td1.className = 'textToCopy';
+                    // td1.setAttribute('contenteditable', true);
+                    // td1.innerHTML = data;
+                    // tr.appendChild(td1);
+                },
+                error: function (data2) {
+                    console.log(data2);
+                }
+            });
+        }
+
+        function ocrImage(actualImage) {
+            var formData = new FormData();
+            // var base64data = reader.result;
+            formData.append('filename', actualImage.name);
+            if (actualImage.tempPropX) {
+                formData.append('tempPropX', actualImage.tempPropX);
+                formData.append('tempPropY', actualImage.tempPropY);
+                formData.append('tempPropW', actualImage.tempPropW);
+                formData.append('tempPropH', actualImage.tempPropH);
+            }
+            formData.append('pageSegMode', $("#pageSegModeGlobal")[0].value);
+            formData.append('ocrEngineMode', $("#ocrEngineModeGlobal")[0].value);
+            if ($("#blackBgr")[0].checked) {
+                formData.append('black', true);
+            } else {
+                formData.append('black', false);
+            }
+            $.ajax({
+                type: "POST",
+                url: "/testupload",
+                contentType: false,
+                processData: false,
+                data: formData,
+                success: function (data) {
+                    var tr = actualImage.parentElement.parentElement.parentElement;
+                    var td1 = document.createElement('td');
+                    td1.className = 'textToCopy';
+                    td1.setAttribute('contenteditable', true);
+                    td1.innerHTML = data;
+                    $("#copyCombinedText").prop('disabled', false);
+                    tr.appendChild(td1);
+                },
+                error: function (data2) {
+                    console.log(data2);
+                }
+            });
+        }
+        //$("#00661_invert").Jcrop({setSelect:[50,50,1500,900]});
+        function loadImageAsText(i) {
+            // var buttonId;
+            // if (Array.isArray(i)){
+            //     buttonId = i[0].id;
+            // } else {
+            //     buttonId = i.id;
+            // }
+            // //var imageId = buttonId.substr(0, buttonId.indexOf("btn"));
+            // var actualImage = document.getElementById(buttonId);
+            ocrImage(i);
+        }
+
+
+        function addTrWithImageToTable(temptable, image) {
+            var tr = document.createElement('tr');
+            var td1 = document.createElement('td');
+            td1.className = 'imgclass';
+            td1.appendChild(image);
+            var analyzeButton = document.createElement("button");
+            analyzeButton.innerHTML = 'Read Text (no crop area means whole image)';
+            analyzeButton.id = image.id + 'btn';
+            analyzeButton.addEventListener('click', function () {
+                loadImageAsText(image);
+            });
+            var copyCropButton = document.createElement("button");
+            copyCropButton.innerHTML = 'Copy crop from this image to all others';
+            copyCropButton.id = image.id + 'btn_crop';
+            copyCropButton.addEventListener('click', function () {
+                applyCropToAllImages(image);
+            });
+            td1.appendChild(analyzeButton);
+            td1.appendChild(copyCropButton);
+            td1.append(image.id);
+            tr.appendChild(td1);
+            temptable.appendChild(tr);
+        }
+
+        function ocrAllImages() {
+            $(".imageToCrop").each(function () {
+                //if ($(this)[0].id == "") {
+                loadImageAsText($(this)[0]);
+                //}
+            });
+        }
+
+        function ocrAllImagesDup(){
+            var actualImage = $(".imageToCrop")[0];
+            var formData = new FormData();
+            // var base64data = reader.result;
+            if (actualImage.tempPropX) {
+                formData.append('tempPropX', actualImage.tempPropX);
+                formData.append('tempPropY', actualImage.tempPropY);
+                formData.append('tempPropW', actualImage.tempPropW);
+                formData.append('tempPropH', actualImage.tempPropH);
+            }
+            formData.append('pageSegMode', $("#pageSegModeGlobal")[0].value);
+            formData.append('ocrEngineMode', $("#ocrEngineModeGlobal")[0].value);
+            if ($("#blackBgr")[0].checked) {
+                formData.append('black', true);
+            } else {
+                formData.append('black', false);
+            }
+            $.ajax({
+                type: "POST",
+                url: "/fullcredits",
+                contentType: false,
+                processData: false,
+                data: formData,
+                success: function (data) {
+                    var myKeys = Object.keys(data);
+                    Array.prototype.forEach.call(myKeys, function (myKey) {
+                        var myImg = $("#"+myKey)[0];
+                        var myText = data[myKey];
+                        console.log("ok");
+                        var tr = myImg.parentElement.parentElement.parentElement;
+                        var div1 = document.createElement("div");
+                        var td1 = document.createElement('td');
+                        div1.className = 'textToCopy';
+                        div1.setAttribute('contenteditable', true);
+                        div1.innerHTML = myText;
+                        div1.onkeydown = enterToBr;
+                        var td1 = document.createElement('td');
+                        td1.appendChild(div1);
+                        $("#copyCombinedText").prop('disabled', false);
+                        tr.appendChild(td1);
+                    });
+                },
+                error: function (data2) {
+                    console.log(data2);
+                }
+            });
+        }
+
+        function combineWholeText() {
+            $("#combinedText")[0].innerHTML = '';
+            $(".textToCopy").each(function () {
+                var htmlText = $(this)[0].innerHTML;
+                htmlText = htmlText.replace('<br>','');
+                htmlText = htmlText.replace('<div>','');
+                $("#combinedText")[0].innerHTML += htmlText;
+            });
+            $("#combinedText").prop('hidden', false);
+            $("#showCombinedText").prop('disabled', true);
+            $("#hideCombinedText").prop('disabled', false);
+        }
+
+        function hideWholeText() {
+            $("#combinedText").prop('hidden', true);
+            $("#showCombinedText").prop('disabled', false);
+            $("#hideCombinedText").prop('disabled', true);
+        }
+
+        function copyWholeText() {
+            $("#combinedText")[0].innerHTML = '';
+            $(".textToCopy").each(function () {
+                var htmlText = $(this)[0].innerHTML;
+                // htmlText = htmlText.replace(/(<|&lt;)br\s*\/*(>|&gt;)/g,'')
+                // htmlText = htmlText.replace(/(<|&lt;)div\s*\/*(>|&gt;)/g,'')
+                $("#combinedText")[0].innerHTML += $(this)[0].innerHTML;
+            });
+            var result = $("#combinedText")[0].innerHTML;
+            result = result.replace(/(<|&lt;)br\s*\/*(>|&gt;)/g,'')
+            result = result.replace(/(<|&lt;)div\s*\/*(>|&gt;)/g,'')
+            navigator.clipboard.writeText(result);
+        }
+
+        function finalCoordinates(widget, e) {
+            if (e) {
+                var xCoord = e.cropTarget.pos.x;
+                var yCoord = e.cropTarget.pos.y;
+                var widthCoord = e.cropTarget.pos.w;
+                var heightCoord = e.cropTarget.pos.h;
+            }
+            $(e.currentTarget.childNodes[0]).prop('tempPropX', xCoord);
+            $(e.currentTarget.childNodes[0]).prop('tempPropY', yCoord);
+            $(e.currentTarget.childNodes[0]).prop('tempPropW', widthCoord);
+            $(e.currentTarget.childNodes[0]).prop('tempPropH', heightCoord);
+            $(e.currentTarget.childNodes[0]).prop('widget', widget);
+            console.log("EEEEEEEEE");
+            // variables can be accessed here as
+            // c.x, c.y, c.x2, c.y2, c.w, c.h
+        };
+
+        function applyCropToAllImages(image) {
+            var xCoord = image.tempPropX;
+            var yCoord = image.tempPropY;
+            var widthCoord = image.tempPropW;
+            var heightCoord = image.tempPropH;
+            var widget = image.widget;
+            $(".imageToCrop").each(function () {
+                var potentialWidget = $(this)[0].widget;
+                if (!potentialWidget) {
+                    const rect = Jcrop.Rect.fromPoints([xCoord, yCoord], [xCoord + widthCoord, yCoord + heightCoord]);
+                    const jcrop = $(this)[0].stage;
+                    jcrop.newWidget(rect, {});
+                }
+                // if ($(this)[0].id == image.id){
+                //     console.log("no");
+                // }
+                // else if ($(this)[0].id != "") {
+                //     var test = $(this).Jcrop({
+                //         setSelect: [xCoord, yCoord, xCoord + widthCoord, yCoord + heightCoord],
+                //         bgColor: "",
+                //         //onSelect: finalCoordinates,
+                //         onRelease: finalCoordinates
+                //     });
+                //     $(this).listen('crop.change', (widget, e) => {
+                //                     finalCoordinates(widget, e);
+                //                 });
+                //     console.log(test);
+                //     // stage.listen('crop.change', (widget, e) => {
+                //     //     finalCoordinates(widget, e);
+                //     // });
+                // } else {
+                //     var test = $(this).Jcrop({
+                //         setSelect: [xCoord, yCoord, xCoord + widthCoord, yCoord + heightCoord],
+                //         bgColor: "",
+                //         onRelease: finalCoordinates
+                //     });
+                //     console.log(test);
+                //     // stage.listen('crop.change', (widget, e) => {
+                //     //     finalCoordinates(widget, e);
+                //     // });
+                // }
+                $(this).prop('tempPropX', xCoord);
+                $(this).prop('tempPropY', yCoord);
+                $(this).prop('tempPropW', widthCoord);
+                $(this).prop('tempPropH', heightCoord);
+            });
+        }
+
+        function enterToBr(e) {
+            // trap the return key being pressed
+            if (e.keyCode === 13) {
+                // insert 2 br tags (if only one br tag is inserted the cursor won't go to the next line)
+                document.execCommand('insertHTML', false, '<br>\n');
+                // prevent the default behaviour of return key pressed
+                return false;
+            }
+        };
+
+        function adjustOcrMode(e){
+            //not sure about this yet
+            // if ($("#roleDevLayout")[0].value==1){
+            //     $("#pageSegModeGlobal")[0].value=4;
+            // }
+        }
+    </script>
+</body>
+
+</html>
