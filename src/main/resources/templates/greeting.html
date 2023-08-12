@@ -4,13 +4,15 @@
 <head>
     <title>Credits OCR Test</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-jcrop/0.9.15/css/jquery.Jcrop.min.css"
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-jcrop/0.9.15/css/jquery.Jcrop.min.css"
         integrity="sha512-bbAsdySYlqC/kxg7Id5vEUVWy3nOfYKzVHCKDFgiT+GsHG/3MD7ywtJnJNSgw++HBc+w4j71MLiaeVm1XY5KDQ=="
-        crossorigin="anonymous" referrerpolicy="no-referrer" />
+        crossorigin="anonymous" referrerpolicy="no-referrer" /> -->
     <!-- <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous"> -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-jcrop/0.9.15/js/jquery.Jcrop.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-jcrop/0.9.15/js/jquery.Jcrop.min.js"></script> -->
     <link rel="stylesheet" href="https://unpkg.com/jcrop/dist/jcrop.css">
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css" />
     <script src="https://unpkg.com/jcrop"></script>
 </head>
 
@@ -45,11 +47,18 @@
         <br>
         <input type="checkbox" id="blackBgr" value="black" checked>Dark background and white font
         <br>
-        <input type="checkbox" id="groupItAll" value="black" checked>Try to group/fix output automatically (barely developed)
+        <input type="checkbox" id="groupItAll" value="true" checked>Try to group/fix output automatically (barely
+        developed)
         <br>
-        <input type="checkbox" id="replaceComma" value="black" checked>Replace comma with new line
+        <input type="checkbox" id="replaceComma" value="false" checked>Replace comma with new line
         <br>
-        <select id="previewResolution">
+        <input type="checkbox" id="highContrast" value="true" checked>Colors of role / dev letters have low contrast
+        <br>
+        <input type="checkbox" id="twoWordNames" value="true">Assume each dev name consists of 2 words
+        <br>
+        <input type="checkbox" id="nicknameDetect" value="true">Try to correct nicknames
+        <br>
+        <select id="previewResolution" onchange="modifyResolution()">
             <option value="0" selected="true">Original resolution</option>
             <option value="1">640x480</option>
             <option value="2">800x600</option>
@@ -61,13 +70,14 @@
         <select id="roleDevLayout" onchange="adjustOcrMode()">
             <option value="0">0 - Dev name(s) below role title</option>
             <option value="1">1 - Dev names next to (right) role title</option>
-            <option value="2">2 - Other</option>
+            <option value="2">2 - Dev names next to (left) role title</option>
         </select>
         <button id="scanAllId" disabled>OCR all images</button>
         <br>
         <button id="showCombinedText" disabled>Show combined text</button>
         <button id="hideCombinedText" disabled>Hide combined text</button>
         <button id="copyCombinedText" disabled>Copy combined text</button>
+        <button id="clearCombinedText">Clear text for all images</button>
         <button id="scrapAll">Delete all images</button>
         <button id="copyCrop" disabled>Copy crop to all images</button>
         <p id="combinedText" hidden="true"></p>
@@ -85,6 +95,9 @@
                 </table>
             </div>
         </div>
+        <div id="dialog" title="Loading...">
+            Dialog will close once OCRing is done...
+        </div>
     </div>
     <script>
         var allImageFiles;
@@ -92,6 +105,7 @@
             const fileInput = document.getElementById('select-image');
             const images = document.getElementById('images');
             const temptable = document.getElementById('temptable');
+            $("#dialog").dialog({ autoOpen: false }).hide();
             $("#scanAllId").on('click', function () {
                 //ocrAllImages();
                 ocrAllImagesDup();
@@ -104,6 +118,9 @@
             });
             $("#copyCombinedText").on('click', function () {
                 copyWholeText();
+            });
+            $("#clearCombinedText").on('click', function () {
+                clearWholeText();
             });
             $("#scrapAll").on('click', function () {
                 $("#temptable tr").remove();
@@ -143,6 +160,8 @@
                             i.className = "imageToCrop";
                             i.name = imageFileWithExtension;
                             i.src = URL.createObjectURL(file);  // creates a blobURI
+                            i.origWidth = i.width;
+                            i.origHeight = i.height;
                             //images.innerHTML += `<div class="image_box">`;
                             //i.width=640;
                             //i.height=480;
@@ -174,12 +193,22 @@
             var formData = new FormData();
             if ($("#blackBgr")[0].checked) {
                 formData.append('black', true);
+                $("#dialog")[0].innerHTML="Uploading and inverting images, please wait...";
             } else {
                 formData.append('black', false);
+                $("#dialog")[0].innerHTML="Uploading images, please wait...";
+            }
+            if ($("#highContrast")[0].checked) {
+                formData.append('highContrast', true);
+                $("#dialog")[0].innerHTML="Uploading and grayscaling images, please wait...";
+            } else {
+                $("#dialog")[0].innerHTML="Uploading images, please wait...";
+                formData.append('highContrast', false);
             }
             Array.prototype.forEach.call(targetFiles, function (file) {
                 formData.append('files', file);
             });
+            $("#dialog").dialog("open");
             //formData.append('files', targetFiles);
             $.ajax({
                 type: "POST",
@@ -188,6 +217,7 @@
                 processData: false,
                 data: formData,
                 success: function (data) {
+                    $("#dialog").dialog("close");
                     console.log("EEEEE1");
                     // var tr = $('#' + buttonId)[0].parentElement.parentElement.parentElement;
                     // var td1 = document.createElement('td');
@@ -197,6 +227,7 @@
                     // tr.appendChild(td1);
                 },
                 error: function (data2) {
+                    $("#dialog").dialog("close");
                     console.log(data2);
                 }
             });
@@ -286,7 +317,7 @@
             });
         }
 
-        function ocrAllImagesDup(){
+        function ocrAllImagesDup() {
             var actualImage = $(".imageToCrop")[0];
             var formData = new FormData();
             // var base64data = reader.result;
@@ -299,11 +330,33 @@
             formData.append('pageSegMode', $("#pageSegModeGlobal")[0].value);
             formData.append('ocrEngineMode', $("#ocrEngineModeGlobal")[0].value);
             formData.append('roleDevLayout', $("#roleDevLayout")[0].value);
+            if ($("#replaceComma")[0].checked) {
+                formData.append('replaceComma', true);
+            } else {
+                formData.append('replaceComma', false);
+            }
+            if ($("#groupItAll")[0].checked) {
+                formData.append('groupItAll', true);
+            } else {
+                formData.append('groupItAll', false);
+            }
             if ($("#blackBgr")[0].checked) {
                 formData.append('black', true);
             } else {
                 formData.append('black', false);
             }
+            if ($("#twoWordNames")[0].checked) {
+                formData.append('twoWordNames', true);
+            } else {
+                formData.append('twoWordNames', false);
+            }
+            if ($("#nicknameDetect")[0].checked) {
+                formData.append('nicknameDetect', true);
+            } else {
+                formData.append('nicknameDetect', false);
+            }
+            $("#dialog")[0].innerHTML="Dialog will close once OCRing is done...";
+            $("#dialog").dialog("open");
             $.ajax({
                 type: "POST",
                 url: "/fullcredits",
@@ -311,9 +364,10 @@
                 processData: false,
                 data: formData,
                 success: function (data) {
+                    $("#dialog").dialog("close");
                     var myKeys = Object.keys(data);
                     Array.prototype.forEach.call(myKeys, function (myKey) {
-                        var myImg = $("#"+myKey)[0];
+                        var myImg = $("#" + myKey)[0];
                         var myText = data[myKey];
                         console.log("ok");
                         var tr = myImg.parentElement.parentElement.parentElement;
@@ -324,6 +378,7 @@
                         div1.innerHTML = myText;
                         div1.onkeydown = enterToBr;
                         var td1 = document.createElement('td');
+                        td1.className = 'textToCopyTd';
                         td1.appendChild(div1);
                         $("#copyCombinedText").prop('disabled', false);
                         tr.appendChild(td1);
@@ -331,6 +386,7 @@
                 },
                 error: function (data2) {
                     console.log(data2);
+                    $("#dialog").dialog("close");
                 }
             });
         }
@@ -339,8 +395,8 @@
             $("#combinedText")[0].innerHTML = '';
             $(".textToCopy").each(function () {
                 var htmlText = $(this)[0].innerHTML;
-                htmlText = htmlText.replace('<br>','');
-                htmlText = htmlText.replace('<div>','');
+                htmlText = htmlText.replace('<br>', '');
+                htmlText = htmlText.replace('<div>', '');
                 $("#combinedText")[0].innerHTML += htmlText;
             });
             $("#combinedText").prop('hidden', false);
@@ -363,9 +419,16 @@
                 $("#combinedText")[0].innerHTML += $(this)[0].innerHTML;
             });
             var result = $("#combinedText")[0].innerHTML;
-            result = result.replace(/(<|&lt;)br\s*\/*(>|&gt;)/g,'')
-            result = result.replace(/(<|&lt;)div\s*\/*(>|&gt;)/g,'')
+            result = result.replace(/(<|&lt;)br\s*\/*(>|&gt;)/g, '')
+            result = result.replace(/(<|&lt;)div\s*\/*(>|&gt;)/g, '')
+            result = result.replace(/&amp;/g, "&");
             navigator.clipboard.writeText(result);
+        }
+
+        function clearWholeText() {
+            $(".textToCopyTd").each(function () {
+                $(this)[0].remove();
+            });
         }
 
         function finalCoordinates(widget, e) {
@@ -443,11 +506,57 @@
             }
         };
 
-        function adjustOcrMode(e){
+        function adjustOcrMode(e) {
             //not sure about this yet
-            // if ($("#roleDevLayout")[0].value==1){
-            //     $("#pageSegModeGlobal")[0].value=4;
-            // }
+            if ($("#roleDevLayout")[0].value == 1) {
+                $("#pageSegModeGlobal")[0].value = 4;
+            }
+        }
+
+        function modifyResolution(e) {
+            //not sure about this yet
+            var targetWidth;
+            var targetHeight;
+            var currentVal = $("#previewResolution")[0].value;
+            switch (currentVal) {
+                case "0":
+                    targetWidth=origWidth;
+                    targetHeight=origHeight;
+                    break;
+                case "1":
+                    targetWidth=640;
+                    targetHeight=480;
+                    break;
+                case "2":
+                    targetWidth=800;
+                    targetHeight=600;
+                    break;
+                case "3":
+                    targetWidth=1024;
+                    targetHeight=768;
+                    break;
+                case "4":
+                    targetWidth=1280;
+                    targetHeight=720;
+                    break;
+                case "5":
+                    targetWidth=1440;
+                    targetHeight=900;
+                    break;
+                case "6":
+                    targetWidth=1920;
+                    targetHeight=1080;
+                    break;
+            }
+            $(".imageToCrop").each(function () {
+                //if ($(this)[0].id == "") {
+                $(this)[0].width=targetWidth;
+                $(this)[0].height=targetHeight;
+                $(this)[0].parentElement.style="width: "+targetWidth+"px; height: "+targetHeight+"px;";
+                //}
+            });
+            //i.width=640;
+            //i.height=480;
         }
     </script>
 </body>

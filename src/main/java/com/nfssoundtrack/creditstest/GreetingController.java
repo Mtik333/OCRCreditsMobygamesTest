@@ -1,6 +1,7 @@
 package com.nfssoundtrack.creditstest;
 
 import com.lowagie.text.html.HtmlEncoder;
+import jakarta.servlet.http.HttpSession;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
 import org.springframework.stereotype.Controller;
@@ -12,7 +13,6 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
-import javax.servlet.http.HttpSession;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
@@ -21,8 +21,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Controller
@@ -38,15 +38,19 @@ public class GreetingController {
 
     @PostMapping("/fullcredits")
     @ResponseBody
-    public Map<String,String> getFullCreditsText(HttpSession session,
-                                     @RequestParam(value = "pageSegMode", required = false) Integer segMode,
-                                     @RequestParam(value = "ocrEngineMode", required = false) Integer ocrEngineMode,
-                                     @RequestParam(value = "tempPropX", required = false) String propX,
-                                     @RequestParam(value = "tempPropY", required = false) String propY,
-                                     @RequestParam(value = "tempPropW", required = false) String propW,
-                                     @RequestParam(value = "tempPropH", required = false) String propH,
-                                     @RequestParam(value = "black") boolean isBlack,
-                                                 @RequestParam(value = "roleDevLayout") Integer roleDevLayout)
+    public Map<String, String> getFullCreditsText(HttpSession session,
+                                                  @RequestParam(value = "pageSegMode", required = false) Integer segMode,
+                                                  @RequestParam(value = "ocrEngineMode", required = false) Integer ocrEngineMode,
+                                                  @RequestParam(value = "tempPropX", required = false) String propX,
+                                                  @RequestParam(value = "tempPropY", required = false) String propY,
+                                                  @RequestParam(value = "tempPropW", required = false) String propW,
+                                                  @RequestParam(value = "tempPropH", required = false) String propH,
+                                                  @RequestParam(value = "black") boolean isBlack,
+                                                  @RequestParam(value = "replaceComma") boolean replaceComma,
+                                                  @RequestParam(value = "groupItAll") boolean groupItAll,
+                                                  @RequestParam(value = "twoWordNames") boolean twoWordNames,
+                                                  @RequestParam(value = "nicknameDetect") boolean nicknameDetect,
+                                                  @RequestParam(value = "roleDevLayout") Integer roleDevLayout)
             throws IOException, TesseractException {
         System.out.println("???????????????");
         Rectangle rectangle = null;
@@ -82,14 +86,27 @@ public class GreetingController {
             String textResult = getTextFromImageNoRest(tesseractInstance, segMode, ocrEngineMode,
                     rectangle, img);
             String result2 = textResult.replaceAll("\n\n\n+", "\n\n");
-            String result3 = NameModelHelper.replaceSomeCharacters(result2);
-            resultsPerFile.put(path, result3);
+            if (replaceComma) {
+                result2 = NameModelHelper.replaceSomeCharacters(result2);
+            }
+            resultsPerFile.put(path, result2);
         }
-        Map<String,String> allResults=null;
-        if (roleDevLayout==0){
-            allResults = MobygamesHelper.reworkResultDevUnder(resultsPerFile);
-        } else if (roleDevLayout==1){
-            allResults = MobygamesHelper.reworkResultDevNext(resultsPerFile);
+        Map<String, String> allResults = null;
+        if (groupItAll) {
+            if (roleDevLayout == 0) {
+                allResults = MobygamesHelper.reworkResultDevUnder(resultsPerFile, nicknameDetect);
+            } else if (roleDevLayout == 1) {
+                allResults = MobygamesHelper.reworkResultDevNext(resultsPerFile, twoWordNames, nicknameDetect);
+            }
+            return allResults;
+        } else {
+            allResults = new TreeMap<>();
+            for (Map.Entry<Path, String> entry : resultsPerFile.entrySet()) {
+                String fileIdName = entry.getKey().getFileName().toString();
+                fileIdName = fileIdName.replace("invert_", "");
+                fileIdName = fileIdName.substring(0, fileIdName.indexOf("."));
+                allResults.put(fileIdName, HtmlEncoder.encode(entry.getValue()));
+            }
         }
         return allResults;
     }
@@ -105,6 +122,10 @@ public class GreetingController {
                                    @RequestParam(value = "tempPropW", required = false) String propW,
                                    @RequestParam(value = "tempPropH", required = false) String propH,
                                    @RequestParam(value = "black") boolean isBlack,
+                                   @RequestParam(value = "replaceComma") boolean replaceComma,
+                                   @RequestParam(value = "groupItAll") boolean groupItAll,
+                                   @RequestParam(value = "twoWordNames") boolean twoWordNames,
+                                   @RequestParam(value = "nicknameDetect") boolean nicknameDetect,
                                    @RequestParam(value = "roleDevLayout") Integer roleDevLayout
     )
 
@@ -129,24 +150,32 @@ public class GreetingController {
                 rectangle, img);
         //we don't really want to have more than 2 \n going on
         String result2 = result.replaceAll("\n\n\n+", "\n\n");
-        String result3 = NameModelHelper.replaceSomeCharacters(result2);
+        if (replaceComma) {
+            result2 = NameModelHelper.replaceSomeCharacters(result2);
+        }
         Map<Path, String> resultsPerFile = new TreeMap<>();
-        resultsPerFile.put(pathToFile,result3);
-        Map<String,String> allResults=null;
-        if (roleDevLayout==0){
-            allResults = MobygamesHelper.reworkResultDevUnder(resultsPerFile);
-        } else if (roleDevLayout==1){
-            allResults = MobygamesHelper.reworkResultDevNext(resultsPerFile);
+        resultsPerFile.put(pathToFile, result2);
+        Map<String, String> allResults = null;
+        if (groupItAll) {
+            if (roleDevLayout == 0) {
+                allResults = MobygamesHelper.reworkResultDevUnder(resultsPerFile, nicknameDetect);
+            } else if (roleDevLayout == 1) {
+                allResults = MobygamesHelper.reworkResultDevNext(resultsPerFile, twoWordNames, nicknameDetect);
+            }
+            return allResults.get(pathToFile);
+        } else {
+            return HtmlEncoder.encode(result2);
         }
 //        NameModelHelper.analyzeSentence(result);
-        return allResults.get(pathToFile);
+//        return allResults.get(pathToFile);
     }
 
     @PostMapping("/inittestupload")
     @ResponseBody
     public String uploadImageToBackend(HttpSession session,
                                        @RequestParam("files") MultipartFile[] files,
-                                       @RequestParam(value = "black") boolean isBlack
+                                       @RequestParam(value = "black") boolean isBlack,
+                                       @RequestParam(value = "highContrast") boolean grayScale
     ) throws IOException {
         Path subPath = Paths.get("uploads" + File.separator + session.getId());
         if (!subPath.toFile().exists()) {
@@ -160,7 +189,7 @@ public class GreetingController {
                 }
                 Files.copy(file.getInputStream(), targetPath);
                 if (isBlack) {
-                    NameModelHelper.invertImage(targetPath, file.getOriginalFilename());
+                    NameModelHelper.invertImage(targetPath, file.getOriginalFilename(), grayScale);
                 }
             } catch (IOException e) {
                 throw new RuntimeException(e);

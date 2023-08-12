@@ -3,7 +3,6 @@ package com.nfssoundtrack.creditstest;
 import opennlp.tools.namefind.NameFinderME;
 import opennlp.tools.namefind.TokenNameFinderModel;
 import opennlp.tools.util.Span;
-import org.apache.commons.text.CaseUtils;
 import org.apache.commons.text.WordUtils;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
@@ -12,7 +11,10 @@ import org.springframework.stereotype.Component;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,13 +34,13 @@ public class NameModelHelper {
         nameFinder = new NameFinderME(model);
     }
 
-    public static String replaceSomeCharacters(String imageText){
+    public static String replaceSomeCharacters(String imageText) {
         StringBuilder parsedText = new StringBuilder();
         String[] sentence = imageText.split("\n");
 //        String[] noWhiteSpaceSentence = new String[sentence.length];
-        for (int i=0; i<sentence.length; i++) {
+        for (int i = 0; i < sentence.length; i++) {
             String[] splitByComma = sentence[i].split(",");
-            for (int j=0; j<splitByComma.length; j++){
+            for (int j = 0; j < splitByComma.length; j++) {
                 String camelCased =
                         WordUtils.capitalizeFully(splitByComma[j].trim());
                 parsedText.append(camelCased).append("\n");
@@ -52,11 +54,11 @@ public class NameModelHelper {
         return parsedText.toString();
     }
 
-    public static String analyzeSentence(String imageText){
+    public static String analyzeSentence(String imageText) {
         List<String> allWordsOneByOne = new ArrayList<>();
         String[] sentence = imageText.split("\n");
 //        String[] noWhiteSpaceSentence = new String[sentence.length];
-        for (int i=0; i<sentence.length; i++) {
+        for (int i = 0; i < sentence.length; i++) {
             String[] splitByWhitespace = sentence[i].split(" ");
             allWordsOneByOne.addAll(List.of(splitByWhitespace));
             //noWhiteSpaceSentence[i] = sentence[i].split(" ");
@@ -67,7 +69,7 @@ public class NameModelHelper {
         return imageText;
     }
 
-    public static void invertImage(Path imagePath, String originalFileName) {
+    public static void invertImage(Path imagePath, String originalFileName, boolean grayscale) {
         BufferedImage inputFile = null;
         try {
             inputFile = ImageIO.read(imagePath.toFile());
@@ -85,23 +87,20 @@ public class NameModelHelper {
                 int red = 255 - col.getRed();
                 int green = 255 - col.getGreen();
                 int blue = 255 - col.getBlue();
-//                col = new Color(red,green,blue);
-                //grayscale
-                red = (int)(red * 0.299);
-                green = (int)(green * 0.587);
-                blue = (int)(blue *0.114);
-//                //invert image
-//                red = 255 - red;
-//                green = 255 - green;
-//                blue = 255 - blue;
-//                col = new Color(red,green,blue);
-                col = new Color(red+green+blue, red+green+blue,red+green+blue);
+                if (grayscale) {
+                    red = (int) (red * 0.299);
+                    green = (int) (green * 0.587);
+                    blue = (int) (blue * 0.114);
+                    col = new Color(red + green + blue, red + green + blue, red + green + blue);
+                } else {
+                    col = new Color(red, green, blue);
+                }
                 inputFile.setRGB(x, y, col.getRGB());
             }
         }
         try {
             String dedicatedPath = imagePath.toFile().getPath();
-            dedicatedPath = dedicatedPath.replace(originalFileName, "invert_"+originalFileName);
+            dedicatedPath = dedicatedPath.replace(originalFileName, "invert_" + originalFileName);
             File outputFile = new File(dedicatedPath);
             ImageIO.write(inputFile, "png", outputFile);
         } catch (IOException e) {
