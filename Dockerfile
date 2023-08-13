@@ -12,12 +12,14 @@ RUN apt-get update
 RUN apt-get install -y java-17-amazon-corretto-jdk # Fixed the package name
 RUN apt-get update
 RUN apt-get install -y tesseract-ocr
+RUN apt-get update
+RUN apt-get install -y maven
 WORKDIR /app
 COPY . .
-#RUN mvn clean package
+RUN mvn clean package
 #ADD /target/ocr-crap.jar ocr-crap.jar
-#COPY ./target/creditstest.jar /app
-#COPY ./src/main/resources/tessdata/eng.traineddata /app
+COPY ./target/creditstest.jar /app
+COPY ./src/main/resources/tessdata/eng.traineddata /app
 EXPOSE 8080
 ENTRYPOINT ["java","-jar","creditstest.jar "]
 #RUN yum install tesseract-ocr # Commented out since using apt-get for package installation
