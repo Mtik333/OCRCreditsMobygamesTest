@@ -219,12 +219,6 @@
                 success: function (data) {
                     $("#dialog").dialog("close");
                     console.log("EEEEE1");
-                    // var tr = $('#' + buttonId)[0].parentElement.parentElement.parentElement;
-                    // var td1 = document.createElement('td');
-                    // td1.className = 'textToCopy';
-                    // td1.setAttribute('contenteditable', true);
-                    // td1.innerHTML = data;
-                    // tr.appendChild(td1);
                 },
                 error: function (data2) {
                     $("#dialog").dialog("close");
@@ -273,14 +267,6 @@
         }
         //$("#00661_invert").Jcrop({setSelect:[50,50,1500,900]});
         function loadImageAsText(i) {
-            // var buttonId;
-            // if (Array.isArray(i)){
-            //     buttonId = i[0].id;
-            // } else {
-            //     buttonId = i.id;
-            // }
-            // //var imageId = buttonId.substr(0, buttonId.indexOf("btn"));
-            // var actualImage = document.getElementById(buttonId);
             ocrImage(i);
         }
 
@@ -370,18 +356,24 @@
                         var myImg = $("#" + myKey)[0];
                         var myText = data[myKey];
                         console.log("ok");
-                        var tr = myImg.parentElement.parentElement.parentElement;
-                        var div1 = document.createElement("div");
-                        var td1 = document.createElement('td');
-                        div1.className = 'textToCopy';
-                        div1.setAttribute('contenteditable', true);
-                        div1.innerHTML = myText;
-                        div1.onkeydown = enterToBr;
-                        var td1 = document.createElement('td');
-                        td1.className = 'textToCopyTd';
-                        td1.appendChild(div1);
-                        $("#copyCombinedText").prop('disabled', false);
-                        tr.appendChild(td1);
+                        var textTd = myImg.parentElement.parentElement.nextSibling;
+                        if (textTd!=undefined){
+                            var existingDiv = textTd.children[0];
+                            existingDiv.innerHTML = myText;
+                        } else {
+                            var tr = myImg.parentElement.parentElement.parentElement;
+                            var div1 = document.createElement("div");
+                            var td1 = document.createElement('td');
+                            div1.className = 'textToCopy';
+                            div1.setAttribute('contenteditable', true);
+                            div1.innerHTML = myText;
+                            div1.onkeydown = enterToBr;
+                            var td1 = document.createElement('td');
+                            td1.className = 'textToCopyTd';
+                            td1.appendChild(div1);
+                            $("#copyCombinedText").prop('disabled', false);
+                            tr.appendChild(td1);
+                        }
                     });
                 },
                 error: function (data2) {
@@ -461,34 +453,6 @@
                     const jcrop = $(this)[0].stage;
                     jcrop.newWidget(rect, {});
                 }
-                // if ($(this)[0].id == image.id){
-                //     console.log("no");
-                // }
-                // else if ($(this)[0].id != "") {
-                //     var test = $(this).Jcrop({
-                //         setSelect: [xCoord, yCoord, xCoord + widthCoord, yCoord + heightCoord],
-                //         bgColor: "",
-                //         //onSelect: finalCoordinates,
-                //         onRelease: finalCoordinates
-                //     });
-                //     $(this).listen('crop.change', (widget, e) => {
-                //                     finalCoordinates(widget, e);
-                //                 });
-                //     console.log(test);
-                //     // stage.listen('crop.change', (widget, e) => {
-                //     //     finalCoordinates(widget, e);
-                //     // });
-                // } else {
-                //     var test = $(this).Jcrop({
-                //         setSelect: [xCoord, yCoord, xCoord + widthCoord, yCoord + heightCoord],
-                //         bgColor: "",
-                //         onRelease: finalCoordinates
-                //     });
-                //     console.log(test);
-                //     // stage.listen('crop.change', (widget, e) => {
-                //     //     finalCoordinates(widget, e);
-                //     // });
-                // }
                 $(this).prop('tempPropX', xCoord);
                 $(this).prop('tempPropY', yCoord);
                 $(this).prop('tempPropW', widthCoord);
@@ -508,7 +472,8 @@
 
         function adjustOcrMode(e) {
             //not sure about this yet
-            if ($("#roleDevLayout")[0].value == 1) {
+            var roleLayoutValue = $("#roleDevLayout")[0].value;
+            if (roleLayoutValue == 1 || roleLayoutValue==2) {
                 $("#pageSegModeGlobal")[0].value = 4;
             }
         }

@@ -4,8 +4,11 @@ import com.lowagie.text.html.HtmlEncoder;
 import jakarta.servlet.http.HttpSession;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -18,6 +21,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -28,197 +32,271 @@ import java.util.stream.Collectors;
 @Controller
 public class GreetingController {
 
-    private final Path root = Paths.get("uploads");
+    private static final Logger logger = LoggerFactory.getLogger(GreetingController.class);
 
     @GetMapping("/greeting")
-    public String greeting(@RequestParam(name = "name", required = false, defaultValue = "World") String name, Model model) {
-        model.addAttribute("name", name);
+    public String greeting() {
         return "greeting";
     }
 
     @PostMapping("/fullcredits")
     @ResponseBody
-    public Map<String, String> getFullCreditsText(HttpSession session,
-                                                  @RequestParam(value = "pageSegMode", required = false) Integer segMode,
-                                                  @RequestParam(value = "ocrEngineMode", required = false) Integer ocrEngineMode,
-                                                  @RequestParam(value = "tempPropX", required = false) String propX,
-                                                  @RequestParam(value = "tempPropY", required = false) String propY,
-                                                  @RequestParam(value = "tempPropW", required = false) String propW,
-                                                  @RequestParam(value = "tempPropH", required = false) String propH,
-                                                  @RequestParam(value = "black") boolean isBlack,
-                                                  @RequestParam(value = "replaceComma") boolean replaceComma,
-                                                  @RequestParam(value = "groupItAll") boolean groupItAll,
-                                                  @RequestParam(value = "twoWordNames") boolean twoWordNames,
-                                                  @RequestParam(value = "nicknameDetect") boolean nicknameDetect,
-                                                  @RequestParam(value = "roleDevLayout") Integer roleDevLayout)
-            throws IOException, TesseractException {
-        System.out.println("???????????????");
-        Rectangle rectangle = null;
-        if (propX != null) {
-            rectangle = new Rectangle(Integer.parseInt(propX), Integer.parseInt(propY),
-                    Integer.parseInt(propW), Integer.parseInt(propH));
-        }
-        Tesseract tesseractInstance = new Tesseract();
-        tesseractInstance.setDatapath("src/main/resources/tessdata");
-        tesseractInstance.setLanguage("eng");
-        if (segMode != null) {
-            tesseractInstance.setPageSegMode(segMode);
-        }
-        if (ocrEngineMode != null) {
-            tesseractInstance.setOcrEngineMode(ocrEngineMode);
-        }
-        Path pathToFolder = Paths.get("uploads" + File.separator + session.getId() + File.separator);
-//        File folderPath = pathToFolder.toFile();
-        List<Path> allFiles = Files.list(pathToFolder).collect(Collectors.toList());
-        if (isBlack) {
-            allFiles = allFiles.stream().filter(path -> path.getFileName().toString().contains("invert"))
-                    .sorted(Comparator.comparing(Object::toString))
-                    .collect(Collectors.toList());
-        } else {
-            allFiles = allFiles.stream().filter(path -> !path.getFileName().toString().contains("invert"))
-                    .sorted(Comparator.comparing(Object::toString))
-                    .collect(Collectors.toList());
-        }
-        Map<Path, String> resultsPerFile = new TreeMap<>();
-        for (Path path : allFiles) {
-            byte[] imageBytes = Files.readAllBytes(path);
-            BufferedImage img = ImageIO.read(new ByteArrayInputStream(imageBytes));
-            String textResult = getTextFromImageNoRest(tesseractInstance, segMode, ocrEngineMode,
-                    rectangle, img);
-            String result2 = textResult.replaceAll("\n\n\n+", "\n\n");
-            if (replaceComma) {
-                result2 = NameModelHelper.replaceSomeCharacters(result2);
-            }
-            resultsPerFile.put(path, result2);
+    public ResponseEntity<Map<String, String>> getFullCreditsText(HttpSession session,
+                                                                  @RequestParam(value = "pageSegMode", required = false) Integer segMode,
+                                                                  @RequestParam(value = "ocrEngineMode", required = false) Integer ocrEngineMode,
+                                                                  @RequestParam(value = "tempPropX", required = false) String propX,
+                                                                  @RequestParam(value = "tempPropY", required = false) String propY,
+                                                                  @RequestParam(value = "tempPropW", required = false) String propW,
+                                                                  @RequestParam(value = "tempPropH", required = false) String propH,
+                                                                  @RequestParam(value = "black") boolean isBlack,
+                                                                  @RequestParam(value = "replaceComma") boolean replaceComma,
+                                                                  @RequestParam(value = "groupItAll") boolean groupItAll,
+                                                                  @RequestParam(value = "twoWordNames") boolean twoWordNames,
+                                                                  @RequestParam(value = "nicknameDetect") boolean nicknameDetect,
+                                                                  @RequestParam(value = "roleDevLayout") Integer roleDevLayout) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("starting getFullCreditsText with segMode " + segMode + ", ocrEngineMode " + ocrEngineMode
+                    + ", propX " + propX + ", propY " + propY + ", propW " + propW + ", propH " + propH +
+                    ", isBlack " + isBlack + ", replaceComma " + replaceComma + ", groupItAll " + groupItAll
+                    + ", twoWordNames " + twoWordNames + ", nicknameDetect " + nicknameDetect + ", roleDevLayout " + roleDevLayout);
         }
         Map<String, String> allResults = null;
-        if (groupItAll) {
-            if (roleDevLayout == 0) {
-                allResults = MobygamesHelper.reworkResultDevUnder(resultsPerFile, nicknameDetect);
-            } else if (roleDevLayout == 1) {
-                allResults = MobygamesHelper.reworkResultDevNext(resultsPerFile, twoWordNames, nicknameDetect);
+        try {
+            Rectangle rectangle = null;
+            if (propX != null) {
+                rectangle = new Rectangle(Integer.parseInt(propX), Integer.parseInt(propY),
+                        Integer.parseInt(propW), Integer.parseInt(propH));
             }
-            return allResults;
-        } else {
-            allResults = new TreeMap<>();
-            for (Map.Entry<Path, String> entry : resultsPerFile.entrySet()) {
-                String fileIdName = entry.getKey().getFileName().toString();
-                fileIdName = fileIdName.replace("invert_", "");
-                fileIdName = fileIdName.substring(0, fileIdName.indexOf("."));
-                allResults.put(fileIdName, HtmlEncoder.encode(entry.getValue()));
+            if (logger.isDebugEnabled()) {
+                logger.debug("rectangle created");
             }
+            Tesseract tesseractInstance = new Tesseract();
+            NameModelHelper.setTesseractDatapath(tesseractInstance);
+            tesseractInstance.setLanguage("eng");
+            if (segMode != null) {
+                tesseractInstance.setPageSegMode(segMode);
+            }
+            if (ocrEngineMode != null) {
+                tesseractInstance.setOcrEngineMode(ocrEngineMode);
+            }
+            Path pathToFolder = Paths.get("uploads" + File.separator + session.getId() + File.separator);
+            if (logger.isDebugEnabled()) {
+                logger.debug("path to folder " + pathToFolder);
+            }
+            List<Path> allFiles = Files.list(pathToFolder).collect(Collectors.toList());
+            if (isBlack) {
+                allFiles = allFiles.stream().filter(path -> path.getFileName().toString().contains("invert"))
+                        .sorted(Comparator.comparing(Object::toString))
+                        .collect(Collectors.toList());
+            } else {
+                allFiles = allFiles.stream().filter(path -> !path.getFileName().toString().contains("invert"))
+                        .sorted(Comparator.comparing(Object::toString))
+                        .collect(Collectors.toList());
+            }
+            if (logger.isDebugEnabled()) {
+                logger.debug("allFiles size " + allFiles.size());
+            }
+            Map<Path, String> resultsPerFile = new TreeMap<>();
+            for (Path path : allFiles) {
+                byte[] imageBytes = Files.readAllBytes(path);
+                BufferedImage img = ImageIO.read(new ByteArrayInputStream(imageBytes));
+                if (logger.isDebugEnabled()) {
+                    logger.debug("image fetched");
+                }
+                String textResult = getTextFromImageNoRest(tesseractInstance, segMode, ocrEngineMode,
+                        rectangle, img);
+                if (logger.isDebugEnabled()) {
+                    logger.debug("textResult " + textResult);
+                }
+                String result2 = textResult.replaceAll("\n\n\n+", "\n\n");
+                if (replaceComma) {
+                    result2 = NameModelHelper.replaceSomeCharacters(result2);
+                }
+                if (logger.isDebugEnabled()) {
+                    logger.debug("putting entry in map:  " + path + ", val: " + result2);
+                }
+                resultsPerFile.put(path, result2);
+            }
+            if (groupItAll) {
+                if (roleDevLayout == 0) {
+                    allResults = MobygamesHelper.reworkResultDevUnder(resultsPerFile, nicknameDetect);
+                } else if (roleDevLayout == 1) {
+                    allResults = MobygamesHelper.reworkResultDevNext(resultsPerFile, twoWordNames, nicknameDetect);
+                }
+                if (logger.isDebugEnabled()) {
+                    logger.debug("returning to page");
+                }
+                return ResponseEntity.status(HttpStatus.OK).body(allResults);
+            } else {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("not grouping the result");
+                }
+                allResults = new TreeMap<>();
+                for (Map.Entry<Path, String> entry : resultsPerFile.entrySet()) {
+                    String fileIdName = entry.getKey().getFileName().toString();
+                    fileIdName = fileIdName.replace("invert_", "");
+                    fileIdName = fileIdName.substring(0, fileIdName.indexOf("."));
+                    allResults.put(fileIdName, HtmlEncoder.encode(entry.getValue()));
+                }
+            }
+            return ResponseEntity.status(HttpStatus.OK).body(allResults);
+        } catch (Throwable thr) {
+            allResults = new HashMap<>();
+            allResults.put(thr.getMessage(), Arrays.toString(thr.getStackTrace()));
+            thr.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(allResults);
         }
-        return allResults;
     }
 
     @PostMapping("/testupload")
     @ResponseBody
-    public String getTextFromImage(HttpSession session,
-                                   @RequestParam("filename") String filename,
-                                   @RequestParam(value = "pageSegMode", required = false) Integer segMode,
-                                   @RequestParam(value = "ocrEngineMode", required = false) Integer ocrEngineMode,
-                                   @RequestParam(value = "tempPropX", required = false) String propX,
-                                   @RequestParam(value = "tempPropY", required = false) String propY,
-                                   @RequestParam(value = "tempPropW", required = false) String propW,
-                                   @RequestParam(value = "tempPropH", required = false) String propH,
-                                   @RequestParam(value = "black") boolean isBlack,
-                                   @RequestParam(value = "replaceComma") boolean replaceComma,
-                                   @RequestParam(value = "groupItAll") boolean groupItAll,
-                                   @RequestParam(value = "twoWordNames") boolean twoWordNames,
-                                   @RequestParam(value = "nicknameDetect") boolean nicknameDetect,
-                                   @RequestParam(value = "roleDevLayout") Integer roleDevLayout
-    )
-
-            throws IOException, TesseractException {
-        System.out.println("???????????????");
-        Rectangle rectangle = null;
-        if (propX != null) {
-            rectangle = new Rectangle(Integer.parseInt(propX), Integer.parseInt(propY),
-                    Integer.parseInt(propW), Integer.parseInt(propH));
+    public ResponseEntity<String> getTextFromImage(HttpSession session,
+                                                   @RequestParam("filename") String filename,
+                                                   @RequestParam(value = "pageSegMode", required = false) Integer segMode,
+                                                   @RequestParam(value = "ocrEngineMode", required = false) Integer ocrEngineMode,
+                                                   @RequestParam(value = "tempPropX", required = false) String propX,
+                                                   @RequestParam(value = "tempPropY", required = false) String propY,
+                                                   @RequestParam(value = "tempPropW", required = false) String propW,
+                                                   @RequestParam(value = "tempPropH", required = false) String propH,
+                                                   @RequestParam(value = "black") boolean isBlack,
+                                                   @RequestParam(value = "replaceComma") boolean replaceComma,
+                                                   @RequestParam(value = "groupItAll") boolean groupItAll,
+                                                   @RequestParam(value = "twoWordNames") boolean twoWordNames,
+                                                   @RequestParam(value = "nicknameDetect") boolean nicknameDetect,
+                                                   @RequestParam(value = "roleDevLayout") Integer roleDevLayout
+    ) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("starting getFullCreditsText with segMode " + segMode + ", ocrEngineMode " + ocrEngineMode
+                    + ", propX " + propX + ", propY " + propY + ", propW " + propW + ", propH " + propH +
+                    ", isBlack " + isBlack + ", replaceComma " + replaceComma + ", groupItAll " + groupItAll
+                    + ", twoWordNames " + twoWordNames + ", nicknameDetect " + nicknameDetect + ", roleDevLayout " + roleDevLayout);
         }
-        Path pathToFile;
-        if (isBlack) {
-            pathToFile = Paths.get("uploads" + File.separator + session.getId()
-                    + File.separator + "invert_" + filename);
-        } else {
-            pathToFile = Paths.get("uploads" + File.separator + session.getId()
-                    + File.separator + filename);
-        }
-        byte[] imageBytes = Files.readAllBytes(pathToFile);
-        BufferedImage img = ImageIO.read(new ByteArrayInputStream(imageBytes));
-        String result = getTextFromImageNoRest(null, segMode, ocrEngineMode,
-                rectangle, img);
-        //we don't really want to have more than 2 \n going on
-        String result2 = result.replaceAll("\n\n\n+", "\n\n");
-        if (replaceComma) {
-            result2 = NameModelHelper.replaceSomeCharacters(result2);
-        }
-        Map<Path, String> resultsPerFile = new TreeMap<>();
-        resultsPerFile.put(pathToFile, result2);
-        Map<String, String> allResults = null;
-        if (groupItAll) {
-            if (roleDevLayout == 0) {
-                allResults = MobygamesHelper.reworkResultDevUnder(resultsPerFile, nicknameDetect);
-            } else if (roleDevLayout == 1) {
-                allResults = MobygamesHelper.reworkResultDevNext(resultsPerFile, twoWordNames, nicknameDetect);
+        try {
+            Rectangle rectangle = null;
+            if (propX != null) {
+                rectangle = new Rectangle(Integer.parseInt(propX), Integer.parseInt(propY),
+                        Integer.parseInt(propW), Integer.parseInt(propH));
             }
-            return allResults.get(pathToFile);
-        } else {
-            return HtmlEncoder.encode(result2);
+            if (logger.isDebugEnabled()) {
+                logger.debug("rectangle created");
+            }
+            Path pathToFile;
+            if (isBlack) {
+                pathToFile = Paths.get("uploads" + File.separator + session.getId()
+                        + File.separator + "invert_" + filename);
+            } else {
+                pathToFile = Paths.get("uploads" + File.separator + session.getId()
+                        + File.separator + filename);
+            }
+            byte[] imageBytes = Files.readAllBytes(pathToFile);
+            BufferedImage img = ImageIO.read(new ByteArrayInputStream(imageBytes));
+            if (logger.isDebugEnabled()) {
+                logger.debug("image fetched");
+            }
+            String result = getTextFromImageNoRest(null, segMode, ocrEngineMode,
+                    rectangle, img);
+            if (logger.isDebugEnabled()) {
+                logger.debug("text result " + result);
+            }
+            //we don't really want to have more than 2 \n going on
+            String result2 = result.replaceAll("\n\n\n+", "\n\n");
+            if (replaceComma) {
+                result2 = NameModelHelper.replaceSomeCharacters(result2);
+            }
+            Map<Path, String> resultsPerFile = new TreeMap<>();
+            resultsPerFile.put(pathToFile, result2);
+            Map<String, String> allResults = null;
+            if (groupItAll) {
+                if (roleDevLayout == 0) {
+                    allResults = MobygamesHelper.reworkResultDevUnder(resultsPerFile, nicknameDetect);
+                } else if (roleDevLayout == 1) {
+                    allResults = MobygamesHelper.reworkResultDevNext(resultsPerFile, twoWordNames, nicknameDetect);
+                }
+                if (logger.isDebugEnabled()) {
+                    logger.debug("return to page with grouping " + result2);
+                }
+                return ResponseEntity.status(HttpStatus.OK).body(allResults.get(pathToFile));
+            } else {
+                return ResponseEntity.status(HttpStatus.OK).body(HtmlEncoder.encode(result2));
+            }
+        } catch (Throwable thr) {
+            thr.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(thr.getMessage());
         }
-//        NameModelHelper.analyzeSentence(result);
-//        return allResults.get(pathToFile);
     }
 
     @PostMapping("/inittestupload")
     @ResponseBody
-    public String uploadImageToBackend(HttpSession session,
-                                       @RequestParam("files") MultipartFile[] files,
-                                       @RequestParam(value = "black") boolean isBlack,
-                                       @RequestParam(value = "highContrast") boolean grayScale
-    ) throws IOException {
-        Path subPath = Paths.get("uploads" + File.separator + session.getId());
-        if (!subPath.toFile().exists()) {
-            Files.createDirectory(subPath);
+    public ResponseEntity<String> uploadImageToBackend(HttpSession session,
+                                                       @RequestParam("files") MultipartFile[] files,
+                                                       @RequestParam(value = "black") boolean isBlack,
+                                                       @RequestParam(value = "highContrast") boolean grayScale
+    ) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("start uploadImageToBackend with " + session.getId() + ", files " + Arrays.toString(files)
+                    + ", isBlack " + isBlack + ", grayScale " + grayScale);
         }
-        Arrays.stream(files).forEach(file -> {
-            try {
-                Path targetPath = subPath.resolve(file.getOriginalFilename());
-                if (targetPath.toFile().exists()) {
-                    targetPath.toFile().delete();
-                }
-                Files.copy(file.getInputStream(), targetPath);
-                if (isBlack) {
-                    NameModelHelper.invertImage(targetPath, file.getOriginalFilename(), grayScale);
-                }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+        try {
+            Path subPath = Paths.get("uploads" + File.separator + session.getId());
+            if (!subPath.toFile().exists()) {
+                Files.createDirectory(subPath);
             }
-        });
-        return "tttt";
+            Arrays.stream(files).forEach(file -> {
+                try {
+                    Path targetPath = subPath.resolve(file.getOriginalFilename());
+                    if (targetPath.toFile().exists()) {
+                        targetPath.toFile().delete();
+                    }
+                    Files.copy(file.getInputStream(), targetPath);
+                    if (isBlack) {
+                        NameModelHelper.invertImage(targetPath, file.getOriginalFilename(), grayScale);
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            return ResponseEntity.status(HttpStatus.OK).body("ok");
+        } catch (Throwable thr) {
+            thr.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(thr.getMessage());
+        }
     }
 
     @PostMapping("/cleandir")
     @ResponseBody
-    public String cleanSessionImagesDirectory(HttpSession session) {
+    public ResponseEntity<String> cleanSessionImagesDirectory(HttpSession session) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("starting cleanSessionImagesDirectory with " + session.getId());
+        }
         Path subPath = Paths.get("uploads" + File.separator + session.getId());
         if (subPath.toFile().exists()) {
             File folder = subPath.toFile();
-            for (File file : folder.listFiles()) {
-                if (!file.isDirectory()) {
-                    file.delete();
+            File[] listFiles = folder.listFiles();
+            if (listFiles != null) {
+                for (File file : listFiles) {
+                    if (!file.isDirectory()) {
+                        boolean fileDeleted = file.delete();
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("deleted " + file.getName() + ", " + fileDeleted);
+                        }
+                    }
                 }
             }
         }
-        return "done";
+        return ResponseEntity.status(HttpStatus.OK).body("done");
     }
 
     public String getTextFromImageNoRest(Tesseract tesseractInstance, Integer segMode,
                                          Integer ocrEngineMode, Rectangle rectangle, BufferedImage img
-    ) throws TesseractException {
+    ) throws URISyntaxException, TesseractException {
+        if (logger.isDebugEnabled()) {
+            logger.debug("starting cleanSessionImagesDirectory with " + tesseractInstance
+                    + ", segMode" + segMode + ", ocrEngineMode " + ocrEngineMode
+                    + ", rectangle " + rectangle + ", img " + img);
+        }
         if (tesseractInstance == null) {
             tesseractInstance = new Tesseract();
-            tesseractInstance.setDatapath("src/main/resources/tessdata");
+            NameModelHelper.setTesseractDatapath(tesseractInstance);
             tesseractInstance.setLanguage("eng");
             if (segMode != null) {
                 tesseractInstance.setPageSegMode(segMode);
@@ -228,52 +306,10 @@ public class GreetingController {
             }
         }
         String result = tesseractInstance.doOCR(img, rectangle);
-        //we don't really want to have more than 2 \n going on
-//        String result2 = result.replaceAll("\n\n\n+", "\n\n");
-//        String result3 = NameModelHelper.replaceSomeCharacters(result2);
-//        NameModelHelper.analyzeSentence(result);
+        if (logger.isDebugEnabled()) {
+            logger.debug("OCR done successfully");
+        }
         return result;
     }
 
-//    @Autowired
-//    FilesStorageService storageService;
-//
-//    @PostMapping("/upload")
-//    public ResponseEntity<ResponseMessage> uploadFiles(@RequestParam("files") MultipartFile[] files) {
-//        String message = "";
-//        try {
-//            List<String> fileNames = new ArrayList<>();
-//
-//            Arrays.asList(files).stream().forEach(file -> {
-//                storageService.save(file);
-//                fileNames.add(file.getOriginalFilename());
-//            });
-//
-//            message = "Uploaded the files successfully: " + fileNames;
-//            return ResponseEntity.status(HttpStatus.OK).body(new ResponseMessage(message));
-//        } catch (Exception e) {
-//            message = "Fail to upload files!";
-//            return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body(new ResponseMessage(message));
-//        }
-//    }
-
-//    @GetMapping("/files")
-//    public ResponseEntity<List<FileInfo>> getListFiles() {
-//        List<FileInfo> fileInfos = storageService.loadAll().map(path -> {
-//            String filename = path.getFileName().toString();
-//            String url = MvcUriComponentsBuilder
-//                    .fromMethodName(GreetingController.class, "getFile", path.getFileName().toString()).build().toString();
-//
-//            return new FileInfo(filename, url);
-//        }).collect(Collectors.toList());
-//
-//        return ResponseEntity.status(HttpStatus.OK).body(fileInfos);
-//    }
-//
-//    @GetMapping("/files/{filename:.+}")
-//    public ResponseEntity<Resource> getFile(@PathVariable String filename) {
-//        Resource file = storageService.load(filename);
-//        return ResponseEntity.ok()
-//                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getFilename() + "\"").body(file);
-//    }
 }
