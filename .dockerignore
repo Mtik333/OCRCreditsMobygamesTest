@@ -1,0 +1,11 @@
+deploy
+htmlcov
+**/site
+test-reports
+#Dockerfile
+#**/target
+.idea
+.settings
+.vscode
+**/.settings
+#Dockerfile
