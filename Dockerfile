@@ -16,6 +16,6 @@ WORKDIR /app
 #ADD /target/ocr-crap.jar ocr-crap.jar
 COPY ./target/creditstest.jar /app
 COPY ./src/main/resources/tessdata/eng.traineddata /app
-EXPOSE8080
+EXPOSE 8080
 ENTRYPOINT ["java","-jar","creditstest.jar "]
 #RUN yum install tesseract-ocr # Commented out since using apt-get for package installation
