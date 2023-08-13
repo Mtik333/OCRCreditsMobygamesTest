@@ -12,8 +12,10 @@ RUN apt-get update
 RUN apt-get install -y java-17-amazon-corretto-jdk # Fixed the package name
 RUN apt-get update
 RUN apt-get install -y tesseract-ocr
+RUN dir
 WORKDIR /app
 COPY . .
+RUN dir
 #ADD /target/ocr-crap.jar ocr-crap.jar
 COPY ./target/creditstest.jar /app
 COPY ./src/main/resources/tessdata/eng.traineddata /app
