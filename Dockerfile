@@ -18,8 +18,8 @@ WORKDIR /app
 COPY . .
 RUN mvn clean package
 #ADD /target/ocr-crap.jar ocr-crap.jar
-COPY ./target/creditstest.jar /app
-COPY ./src/main/resources/tessdata/eng.traineddata /app
+COPY target/creditstest.jar /app
+COPY src/main/resources/tessdata/eng.traineddata /app
 EXPOSE 8080
 ENTRYPOINT ["java","-jar","creditstest.jar "]
 #RUN yum install tesseract-ocr # Commented out since using apt-get for package installation
