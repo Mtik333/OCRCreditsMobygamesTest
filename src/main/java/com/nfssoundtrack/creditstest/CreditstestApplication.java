@@ -3,6 +3,7 @@ package com.nfssoundtrack.creditstest;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.util.FileSystemUtils;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,9 +22,8 @@ public class CreditstestApplication implements CommandLineRunner {
     @Override
     public void run(String... arg) throws Exception {
         Path root = Paths.get("uploads");
-        if (!root.toFile().exists()) {
-            Files.createDirectory(root);
-        }
+        FileSystemUtils.deleteRecursively(root.toFile());
+        Files.createDirectory(root);
 //		storageService.deleteAll();
 //		storageService.init();
     }

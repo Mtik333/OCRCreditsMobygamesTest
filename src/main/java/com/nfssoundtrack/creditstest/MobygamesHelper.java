@@ -329,6 +329,10 @@ public class MobygamesHelper {
             lineWithNick = lineWithNick.replace("’", "'").replace("\"", "'");
             int firstIndex = lineWithNick.indexOf("'");
             int lastIndex = lineWithNick.lastIndexOf("'");
+            if (firstIndex==0 && lastIndex==lineWithNick.length()-1){
+                //this basically means the whole phrase is in quotation marks so there's no nickname
+                return lineWithNick;
+            }
             String nickName = lineWithNick.substring(firstIndex + 1, lastIndex);
             String finalName = lineWithNick.substring(0, firstIndex - 1) + lineWithNick.substring(lastIndex + 1) + " ('" + nickName + "')";
             if (logger.isDebugEnabled()) {

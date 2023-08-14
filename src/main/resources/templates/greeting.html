@@ -101,6 +101,8 @@
     </div>
     <script>
         var allImageFiles;
+        var reportStatus;
+        var basicHtml;
         $(document).ready(function () {
             const fileInput = document.getElementById('select-image');
             const images = document.getElementById('images');
@@ -135,6 +137,7 @@
                         console.log("EEEEE1");
                     },
                     error: function (data2) {
+                        $("#dialog")[0].innerHTML = data2.responseText;
                         console.log(data2);
                     }
                 });
@@ -193,16 +196,15 @@
             var formData = new FormData();
             if ($("#blackBgr")[0].checked) {
                 formData.append('black', true);
-                $("#dialog")[0].innerHTML="Uploading and inverting images, please wait...";
+                $("#dialog")[0].innerHTML = "Uploading and inverting images, please wait...";
             } else {
                 formData.append('black', false);
-                $("#dialog")[0].innerHTML="Uploading images, please wait...";
+                $("#dialog")[0].innerHTML = "Uploading images, please wait...";
             }
             if ($("#highContrast")[0].checked) {
                 formData.append('highContrast', true);
-                $("#dialog")[0].innerHTML="Uploading and grayscaling images, please wait...";
+                $("#dialog")[0].innerHTML = "Uploading and grayscaling images, please wait...";
             } else {
-                $("#dialog")[0].innerHTML="Uploading images, please wait...";
                 formData.append('highContrast', false);
             }
             Array.prototype.forEach.call(targetFiles, function (file) {
@@ -221,7 +223,8 @@
                     console.log("EEEEE1");
                 },
                 error: function (data2) {
-                    $("#dialog").dialog("close");
+                    //$("#dialog").dialog("close");
+                    $("#dialog")[0].innerHTML = data2.responseText;
                     console.log(data2);
                 }
             });
@@ -240,10 +243,30 @@
             formData.append('pageSegMode', $("#pageSegModeGlobal")[0].value);
             formData.append('ocrEngineMode', $("#ocrEngineModeGlobal")[0].value);
             formData.append('roleDevLayout', $("#roleDevLayout")[0].value);
+            if ($("#replaceComma")[0].checked) {
+                formData.append('replaceComma', true);
+            } else {
+                formData.append('replaceComma', false);
+            }
+            if ($("#groupItAll")[0].checked) {
+                formData.append('groupItAll', true);
+            } else {
+                formData.append('groupItAll', false);
+            }
             if ($("#blackBgr")[0].checked) {
                 formData.append('black', true);
             } else {
                 formData.append('black', false);
+            }
+            if ($("#twoWordNames")[0].checked) {
+                formData.append('twoWordNames', true);
+            } else {
+                formData.append('twoWordNames', false);
+            }
+            if ($("#nicknameDetect")[0].checked) {
+                formData.append('nicknameDetect', true);
+            } else {
+                formData.append('nicknameDetect', false);
             }
             $.ajax({
                 type: "POST",
@@ -261,6 +284,8 @@
                     tr.appendChild(td1);
                 },
                 error: function (data2) {
+                    $("#dialog")[0].innerHTML = data2.responseText;
+                    $("#dialog").dialog("open");
                     console.log(data2);
                 }
             });
@@ -341,8 +366,10 @@
             } else {
                 formData.append('nicknameDetect', false);
             }
-            $("#dialog")[0].innerHTML="Dialog will close once OCRing is done...";
+            $("#dialog")[0].innerHTML = "Dialog will close once OCRing is done...";
             $("#dialog").dialog("open");
+            reportStatus = true;
+            basicHtml = $("#dialog")[0].innerHTML;
             $.ajax({
                 type: "POST",
                 url: "/fullcredits",
@@ -350,6 +377,7 @@
                 processData: false,
                 data: formData,
                 success: function (data) {
+                    reportStatus = false;
                     $("#dialog").dialog("close");
                     var myKeys = Object.keys(data);
                     Array.prototype.forEach.call(myKeys, function (myKey) {
@@ -357,7 +385,7 @@
                         var myText = data[myKey];
                         console.log("ok");
                         var textTd = myImg.parentElement.parentElement.nextSibling;
-                        if (textTd!=undefined){
+                        if (textTd != undefined) {
                             var existingDiv = textTd.children[0];
                             existingDiv.innerHTML = myText;
                         } else {
@@ -378,11 +406,13 @@
                 },
                 error: function (data2) {
                     console.log(data2);
-                    $("#dialog").dialog("close");
+                    reportStatus = false;
+                    $("#dialog")[0].innerHTML = data2.responseText;
+                    //$("#dialog").dialog("close");
                 }
             });
+            checkStatus(reportStatus, basicHtml);
         }
-
         function combineWholeText() {
             $("#combinedText")[0].innerHTML = '';
             $(".textToCopy").each(function () {
@@ -473,7 +503,7 @@
         function adjustOcrMode(e) {
             //not sure about this yet
             var roleLayoutValue = $("#roleDevLayout")[0].value;
-            if (roleLayoutValue == 1 || roleLayoutValue==2) {
+            if (roleLayoutValue == 1 || roleLayoutValue == 2) {
                 $("#pageSegModeGlobal")[0].value = 4;
             }
         }
@@ -485,43 +515,72 @@
             var currentVal = $("#previewResolution")[0].value;
             switch (currentVal) {
                 case "0":
-                    targetWidth=origWidth;
-                    targetHeight=origHeight;
+                    targetWidth = origWidth;
+                    targetHeight = origHeight;
                     break;
                 case "1":
-                    targetWidth=640;
-                    targetHeight=480;
+                    targetWidth = 640;
+                    targetHeight = 480;
                     break;
                 case "2":
-                    targetWidth=800;
-                    targetHeight=600;
+                    targetWidth = 800;
+                    targetHeight = 600;
                     break;
                 case "3":
-                    targetWidth=1024;
-                    targetHeight=768;
+                    targetWidth = 1024;
+                    targetHeight = 768;
                     break;
                 case "4":
-                    targetWidth=1280;
-                    targetHeight=720;
+                    targetWidth = 1280;
+                    targetHeight = 720;
                     break;
                 case "5":
-                    targetWidth=1440;
-                    targetHeight=900;
+                    targetWidth = 1440;
+                    targetHeight = 900;
                     break;
                 case "6":
-                    targetWidth=1920;
-                    targetHeight=1080;
+                    targetWidth = 1920;
+                    targetHeight = 1080;
                     break;
             }
             $(".imageToCrop").each(function () {
                 //if ($(this)[0].id == "") {
-                $(this)[0].width=targetWidth;
-                $(this)[0].height=targetHeight;
-                $(this)[0].parentElement.style="width: "+targetWidth+"px; height: "+targetHeight+"px;";
+                $(this)[0].width = targetWidth;
+                $(this)[0].height = targetHeight;
+                $(this)[0].parentElement.style = "width: " + targetWidth + "px; height: " + targetHeight + "px;";
                 //}
             });
             //i.width=640;
             //i.height=480;
+        }
+
+        function doTimeout(basicHtml) {
+            var formData = new FormData();
+            $.ajax({
+                type: "GET",
+                url: "/getstatus",
+                contentType: false,
+                processData: false,
+                async: false,
+                data: formData,
+                success: function (data) {
+                    $("#dialog")[0].innerHTML = data.ocr;
+                    console.log(data);
+                },
+                error: function (data2) {
+                    console.log(data2);
+                }
+            });
+        }
+
+        function checkStatus(basicHtml) {
+            console.log(reportStatus);
+            doTimeout(basicHtml);
+            setTimeout(function(){
+                if (reportStatus){
+                    checkStatus();
+                }
+            }, 3000);
         }
     </script>
 </body>

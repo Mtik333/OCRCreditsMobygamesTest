@@ -6,6 +6,7 @@ import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -33,6 +34,12 @@ import java.util.stream.Collectors;
 public class GreetingController {
 
     private static final Logger logger = LoggerFactory.getLogger(GreetingController.class);
+    private SessionHolder sessionHolder;
+
+    @Autowired
+    public GreetingController(SessionHolder sessionHolder){
+        this.sessionHolder=sessionHolder;
+    }
 
     @GetMapping("/greeting")
     public String greeting() {
@@ -62,6 +69,17 @@ public class GreetingController {
         }
         Map<String, String> allResults = null;
         try {
+            if (sessionHolder.getSessionToResults()==null){
+                sessionHolder.setSessionToResults(new HashMap<>());
+            }
+            ResultsHolder resultsHolder = sessionHolder.getSessionToResults().get(session.getId());
+            if (resultsHolder!=null){
+                resultsHolder.setResultsPerFile(null);
+                resultsHolder.setAllFiles(null);
+            } else {
+                resultsHolder = new ResultsHolder();
+                sessionHolder.getSessionToResults().put(session.getId(),resultsHolder);
+            }
             Rectangle rectangle = null;
             if (propX != null) {
                 rectangle = new Rectangle(Integer.parseInt(propX), Integer.parseInt(propY),
@@ -93,32 +111,13 @@ public class GreetingController {
                         .sorted(Comparator.comparing(Object::toString))
                         .collect(Collectors.toList());
             }
+            resultsHolder.setAllFiles(allFiles);
             if (logger.isDebugEnabled()) {
                 logger.debug("allFiles size " + allFiles.size());
             }
             Map<Path, String> resultsPerFile = new TreeMap<>();
-            for (Path path : allFiles) {
-                byte[] imageBytes = Files.readAllBytes(path);
-                BufferedImage img = ImageIO.read(new ByteArrayInputStream(imageBytes));
-                if (logger.isDebugEnabled()) {
-                    logger.debug("image fetched");
-                }
-                String textResult = getTextFromImageNoRest(tesseractInstance, segMode, ocrEngineMode,
-                        rectangle, img);
-                img = null;
-                imageBytes = null;
-                if (logger.isDebugEnabled()) {
-                    logger.debug("textResult " + textResult);
-                }
-                String result2 = textResult.replaceAll("\n\n\n+", "\n\n");
-                if (replaceComma) {
-                    result2 = NameModelHelper.replaceSomeCharacters(result2);
-                }
-                if (logger.isDebugEnabled()) {
-                    logger.debug("putting entry in map:  " + path + ", val: " + result2);
-                }
-                resultsPerFile.put(path, result2);
-            }
+            resultsHolder.setResultsPerFile(resultsPerFile);
+            resultsHolder.performReading(tesseractInstance,segMode,ocrEngineMode,rectangle,replaceComma);
             rectangle=null;
             tesseractInstance=null;
             allFiles=null;
@@ -294,6 +293,18 @@ public class GreetingController {
             }
         }
         return ResponseEntity.status(HttpStatus.OK).body("done");
+    }
+
+    @GetMapping("/getstatus")
+    @ResponseBody
+    public ResponseEntity<AbstractMap.Entry<String,String>> getTextFromImage(HttpSession session){
+        if (sessionHolder.getSessionToResults()!=null){
+            return ResponseEntity.status(HttpStatus.OK).body(
+                sessionHolder.getSessionToResults().get(session.getId()).giveFeedback());
+        } else {
+            return ResponseEntity.status(HttpStatus.OK).body(
+                    new AbstractMap.SimpleEntry<>("ocr", "Starting the process..."));
+        }
     }
 
     public String getTextFromImageNoRest(Tesseract tesseractInstance, Integer segMode,
