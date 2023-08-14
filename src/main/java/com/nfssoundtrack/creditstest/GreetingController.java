@@ -105,6 +105,8 @@ public class GreetingController {
                 }
                 String textResult = getTextFromImageNoRest(tesseractInstance, segMode, ocrEngineMode,
                         rectangle, img);
+                img = null;
+                imageBytes = null;
                 if (logger.isDebugEnabled()) {
                     logger.debug("textResult " + textResult);
                 }
@@ -117,6 +119,10 @@ public class GreetingController {
                 }
                 resultsPerFile.put(path, result2);
             }
+            rectangle=null;
+            tesseractInstance=null;
+            allFiles=null;
+            pathToFolder=null;
             if (groupItAll) {
                 if (roleDevLayout == 0) {
                     allResults = MobygamesHelper.reworkResultDevUnder(resultsPerFile, nicknameDetect);
@@ -126,6 +132,7 @@ public class GreetingController {
                 if (logger.isDebugEnabled()) {
                     logger.debug("returning to page");
                 }
+                resultsPerFile = null;
                 return ResponseEntity.status(HttpStatus.OK).body(allResults);
             } else {
                 if (logger.isDebugEnabled()) {
@@ -139,6 +146,7 @@ public class GreetingController {
                     allResults.put(fileIdName, HtmlEncoder.encode(entry.getValue()));
                 }
             }
+            resultsPerFile = null;
             return ResponseEntity.status(HttpStatus.OK).body(allResults);
         } catch (Throwable thr) {
             allResults = new HashMap<>();
@@ -195,6 +203,8 @@ public class GreetingController {
             }
             String result = getTextFromImageNoRest(null, segMode, ocrEngineMode,
                     rectangle, img);
+            img = null;
+            imageBytes = null;
             if (logger.isDebugEnabled()) {
                 logger.debug("text result " + result);
             }

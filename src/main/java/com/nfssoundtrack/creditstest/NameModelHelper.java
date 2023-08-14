@@ -56,6 +56,7 @@ public class NameModelHelper {
             is.close();
             // feed the model to name finder class
             nameFinder = new NameFinderME(model);
+            jarUrl=null;
         } catch (Throwable throwable) {
             logger.error("something wrong happened on start: " + throwable.getMessage());
             throwable.printStackTrace();
@@ -78,8 +79,10 @@ public class NameModelHelper {
                         WordUtils.capitalizeFully(s.trim());
                 logger.debug("camelcased sentence: " + camelCased);
                 parsedText.append(camelCased).append("\n");
+                camelCased=null;
             }
         }
+        sentence = null;
         return parsedText.toString();
     }
 
@@ -112,6 +115,8 @@ public class NameModelHelper {
         dedicatedPath = dedicatedPath.replace(originalFileName, "invert_" + originalFileName);
         File outputFile = new File(dedicatedPath);
         ImageIO.write(inputFile, "png", outputFile);
+        inputFile=null;
+        dedicatedPath = null;
     }
 
     public static void setTesseractDatapath(Tesseract tesseractInstance) throws URISyntaxException {

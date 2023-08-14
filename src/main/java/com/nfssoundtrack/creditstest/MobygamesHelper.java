@@ -50,9 +50,11 @@ public class MobygamesHelper {
         for (Map.Entry<Path, String> entry : filesWithText.entrySet()) {
             StringBuilder producedString = new StringBuilder();
             String[] splitTextByNewline = entry.getValue().split("\n");
+            String lineString;
+            String nextLine;
             for (int i = 0; i < splitTextByNewline.length; i++) {
-                String lineString = splitTextByNewline[i].trim();
-                String nextLine = null;
+                lineString = splitTextByNewline[i].trim();
+                nextLine = null;
                 if ((i + 1) != splitTextByNewline.length) {
                     nextLine = splitTextByNewline[i + 1].trim();
                 }
@@ -228,6 +230,7 @@ public class MobygamesHelper {
                 logger.debug("adding entry: " + fileIdName + ", value: " + resultOfTool);
             }
             reworkedMap.put(fileIdName, HtmlEncoder.encode(resultOfTool));
+            resultOfTool= null;
         }
         return reworkedMap;
     }
@@ -252,11 +255,14 @@ public class MobygamesHelper {
             Span firstSpan = nameSpans[0];
             if (firstSpan.getStart() != 0) {
                 roleStarted = true;
+                firstSpan=null;
             }
         }
         if (logger.isDebugEnabled()) {
             logger.debug("roleStarted " + roleStarted);
         }
+        nameSpans = null;
+        lineDividedByWhiteSpace = null;
         return roleStarted;
     }
 
@@ -283,6 +289,9 @@ public class MobygamesHelper {
         }
         String roleBuilderLine = roleBulder.toString().trim();
         String nameBuilderLine = nameBuilder.toString().trim();
+        lineDividedByWhiteSpace=null;
+        roleBulder=null;
+        nameBuilder=null;
         if (logger.isDebugEnabled()) {
             logger.debug("roleBuilderLine " + roleBuilderLine + ", nameBuilderLine " + nameBuilderLine);
         }
@@ -291,13 +300,16 @@ public class MobygamesHelper {
         } else {
             String[] devLine = nameBuilder.toString().split(" ");
             Span[] nameSpans = nameFinderME.find(devLine);
+            devLine = null;
             if (logger.isDebugEnabled()) {
                 logger.debug("nameSpans? " + Arrays.toString(nameSpans));
             }
             if (nameSpans.length == 0) {
                 //??????????
+                nameSpans = null;
                 return new AbstractMap.SimpleEntry<>(lineString, null);
             } else {
+                nameSpans = null;
                 return new AbstractMap.SimpleEntry<>(roleBuilderLine, nameBuilderLine);
             }
         }
@@ -322,6 +334,8 @@ public class MobygamesHelper {
             if (logger.isDebugEnabled()) {
                 logger.debug("finalName " + finalName);
             }
+            nickName = null;
+            lineWithNick = null;
             return finalName.trim();
         } else {
             return lineWithNick;
