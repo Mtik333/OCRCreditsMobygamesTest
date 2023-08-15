@@ -4,7 +4,6 @@ import net.sourceforge.tess4j.Tesseract;
 import opennlp.tools.namefind.NameFinderME;
 import opennlp.tools.namefind.TokenNameFinderModel;
 import org.apache.commons.lang3.SystemUtils;
-import org.apache.commons.text.WordUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.ContextRefreshedEvent;
@@ -20,7 +19,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.file.Path;
 
 @Component
@@ -32,6 +30,7 @@ public class NameModelHelper {
     public final static boolean isLinux = SystemUtils.IS_OS_LINUX;
     public static boolean isJarMode;
 
+    @SuppressWarnings("unused")
     @EventListener
     public void onApplicationEvent(ContextRefreshedEvent event) {
         logger.info("Starting app " + event.toString());
@@ -56,7 +55,7 @@ public class NameModelHelper {
             is.close();
             // feed the model to name finder class
             nameFinder = new NameFinderME(model);
-            jarUrl=null;
+            jarUrl = null;
         } catch (Throwable throwable) {
             logger.error("something wrong happened on start: " + throwable.getMessage());
             throwable.printStackTrace();
@@ -75,11 +74,11 @@ public class NameModelHelper {
             }
             String[] splitByComma = value.split(",");
             for (String s : splitByComma) {
-                String camelCased =
-                        WordUtils.capitalizeFully(s.trim());
-                logger.debug("camelcased sentence: " + camelCased);
-                parsedText.append(camelCased).append("\n");
-                camelCased=null;
+//                if (capitalizeDevNames){
+//                    s = WordUtils.capitalizeFully(s.trim());
+//                }
+//                logger.debug("camelcased sentence: " + s);
+                parsedText.append(s).append("\n");
             }
         }
         sentence = null;
@@ -115,7 +114,7 @@ public class NameModelHelper {
         dedicatedPath = dedicatedPath.replace(originalFileName, "invert_" + originalFileName);
         File outputFile = new File(dedicatedPath);
         ImageIO.write(inputFile, "png", outputFile);
-        inputFile=null;
+        inputFile = null;
         dedicatedPath = null;
     }
 

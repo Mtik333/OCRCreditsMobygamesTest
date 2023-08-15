@@ -11,9 +11,6 @@ import java.nio.file.Paths;
 
 @SpringBootApplication
 public class CreditstestApplication implements CommandLineRunner {
-//
-//	@Resource
-//	FilesStorageService storageService;
 
     public static void main(String[] args) {
         SpringApplication.run(CreditstestApplication.class, args);
@@ -24,7 +21,5 @@ public class CreditstestApplication implements CommandLineRunner {
         Path root = Paths.get("uploads");
         FileSystemUtils.deleteRecursively(root.toFile());
         Files.createDirectory(root);
-//		storageService.deleteAll();
-//		storageService.init();
     }
 }

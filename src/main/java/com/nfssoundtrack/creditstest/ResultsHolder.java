@@ -4,7 +4,6 @@ import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -94,16 +93,16 @@ public class ResultsHolder {
         return result;
     }
 
-    public AbstractMap.Entry<String, String> giveFeedback(){
-        if (resultsPerFile!=null){
-            int inputSize = resultsPerFile.size();
-            int finalSize = allFiles.size();
-            if (inputSize!=finalSize){
-                return new AbstractMap.SimpleEntry<>("ocr","OCRed images: "
-                    +resultsPerFile.size()+"/"+allFiles.size());
-            } else return new AbstractMap.SimpleEntry<>("ocr","Performing post-OCR grouping...");
+    public AbstractMap.Entry<String, String> giveFeedback() {
+        if (resultsPerFile != null) {
+            int inputSize = getResultsPerFile().size();
+            int finalSize = getAllFiles().size();
+            if (inputSize != finalSize) {
+                return new AbstractMap.SimpleEntry<>("ocr", "OCRed images: "
+                        + resultsPerFile.size() + "/" + allFiles.size());
+            } else return new AbstractMap.SimpleEntry<>("ocr", "Performing post-OCR grouping...");
         } else {
-            return new AbstractMap.SimpleEntry<>("ocr","Process has just begun...");
+            return new AbstractMap.SimpleEntry<>("ocr", "Process has just begun...");
         }
     }
 }

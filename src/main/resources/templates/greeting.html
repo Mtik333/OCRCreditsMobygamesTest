@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html>
+<html lang="en">
 
 <head>
     <title>Credits OCR Test</title>
@@ -23,11 +23,12 @@
         <h3>Some lame OCR wannabe for credits submissions</h3>
         <h4>Try to name images like out001, out002, out003 etc.</h4>
         <input type="file" id="select-image" multiple>
-        <select id="pageSegModeGlobal">
+        <br>
+        <label for="pageSegModeGlobal">Choose Tesseract segmentation mode</label><select id="pageSegModeGlobal">
             <option value="0">Orientation and script detection (OSD) only</option>
             <option value="1">Automatic page segmentation with OSD</option>
             <option value="2">Automatic page segmentation, but no OSD, or OCR. (not implemented)</option>
-            <option value="3" selected="true">Fully automatic page segmentation, but no OSD. (Default)</option>
+            <option value="3" selected="selected">Fully automatic page segmentation, but no OSD. (Default)</option>
             <option value="4">Assume a single column of text of variable sizes.</option>
             <option value="5">Assume a single uniform block of vertically aligned text</option>
             <option value="6">Assume a single uniform block of text</option>
@@ -38,28 +39,38 @@
             <option value="11">Sparse text. Find as much text as possible in no particular order</option>
             <option value="12">Sparse text with OSD.</option>
         </select>
-        <select id="ocrEngineModeGlobal">
+        <br>
+        <label for="ocrEngineModeGlobal">Choose Tesseract OCR engine mode</label><select id="ocrEngineModeGlobal">
             <option value="0">0 - Legacy engine only</option>
             <option value="1">1 - Neural nets LSTM engine only</option>
             <option value="2">2 - Legacy + LSTM engines</option>
-            <option value="3" selected="true">3 - Default, based on what is available</option>
+            <option value="3" selected="selected">3 - Default, based on what is available</option>
         </select>
         <br>
-        <input type="checkbox" id="blackBgr" value="black" checked>Dark background and white font
+        <input type="checkbox" id="blackBgr" value="black" checked><label for="blackBgr">Dark background and white
+        font</label>
         <br>
-        <input type="checkbox" id="groupItAll" value="true" checked>Try to group/fix output automatically (barely
+        <input type="checkbox" id="groupItAll" value="true" checked><label for="groupItAll">Try to group/fix output
+        automatically (barely</label>
         developed)
         <br>
-        <input type="checkbox" id="replaceComma" value="false" checked>Replace comma with new line
+        <input type="checkbox" id="replaceComma" value="false" checked><label for="replaceComma">Replace comma with new
+        line</label>
         <br>
-        <input type="checkbox" id="highContrast" value="true" checked>Colors of role / dev letters have low contrast
+        <input type="checkbox" id="highContrast" value="true" checked><label for="highContrast">Colors of role / dev
+        letters have low contrast</label>
         <br>
-        <input type="checkbox" id="twoWordNames" value="true">Assume each dev name consists of 2 words
+        <input type="checkbox" id="twoWordNames" value="true"><label for="twoWordNames">Do not use OpenNLP to perform
+        name recognition</label>
         <br>
-        <input type="checkbox" id="nicknameDetect" value="true">Try to correct nicknames
+        <input type="checkbox" id="nicknameDetect" value="true"><label for="nicknameDetect">Try to correct
+        nicknames</label>
         <br>
-        <select id="previewResolution" onchange="modifyResolution()">
-            <option value="0" selected="true">Original resolution</option>
+        <input type="checkbox" id="capitalizeDevNames" value="true"><label for="capitalizeDevNames">Try to correct
+        UPPERCASE DEV NAMES</label>
+        <br>
+        <label for="previewResolution">Define resolution of images preview</label><select id="previewResolution" onchange="modifyResolution()">
+            <option value="0" selected="selected">Original resolution</option>
             <option value="1">640x480</option>
             <option value="2">800x600</option>
             <option value="3">1024x768</option>
@@ -67,7 +78,8 @@
             <option value="5">1440x900</option>
             <option value="6">1920x1080</option>
         </select>
-        <select id="roleDevLayout" onchange="adjustOcrMode()">
+        <br>
+        <label for="roleDevLayout">Choose credits layout</label><select id="roleDevLayout" onchange="adjustOcrMode()">
             <option value="0">0 - Dev name(s) below role title</option>
             <option value="1">1 - Dev names next to (right) role title</option>
             <option value="2">2 - Dev names next to (left) role title</option>
@@ -80,7 +92,7 @@
         <button id="clearCombinedText">Clear text for all images</button>
         <button id="scrapAll">Delete all images</button>
         <button id="copyCrop" disabled>Copy crop to all images</button>
-        <p id="combinedText" hidden="true"></p>
+        <p id="combinedText" hidden="hidden"></p>
         <div class="preview_image">
 
             <!-- All images will display inside this div -->
@@ -220,7 +232,6 @@
                 data: formData,
                 success: function (data) {
                     $("#dialog").dialog("close");
-                    console.log("EEEEE1");
                 },
                 error: function (data2) {
                     //$("#dialog").dialog("close");
@@ -267,6 +278,11 @@
                 formData.append('nicknameDetect', true);
             } else {
                 formData.append('nicknameDetect', false);
+            }
+            if ($("#capitalizeDevNames")[0].checked) {
+                formData.append('capitalizeDevNames', true);
+            } else {
+                formData.append('capitalizeDevNames', false);
             }
             $.ajax({
                 type: "POST",
@@ -365,6 +381,11 @@
                 formData.append('nicknameDetect', true);
             } else {
                 formData.append('nicknameDetect', false);
+            }
+            if ($("#capitalizeDevNames")[0].checked) {
+                formData.append('capitalizeDevNames', true);
+            } else {
+                formData.append('capitalizeDevNames', false);
             }
             $("#dialog")[0].innerHTML = "Dialog will close once OCRing is done...";
             $("#dialog").dialog("open");
@@ -595,10 +616,8 @@
                 textArea.select();
                 try {
                     var successful = document.execCommand('copy');
-                    var msg = successful ? 'successful' : 'unsuccessful';
-                    toastr.info(msg);
                 } catch (err) {
-                    toastr.warning('Was not possible to copy te text: ', err);
+                    alert("unable to copy text, pass this info to that moron");
                 }
                 document.body.removeChild(textArea);
                 return;

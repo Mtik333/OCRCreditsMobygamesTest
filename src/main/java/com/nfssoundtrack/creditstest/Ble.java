@@ -10,7 +10,7 @@ import opennlp.tools.util.TrainingParameters;
 
 import java.io.*;
 import java.nio.charset.Charset;
-import java.util.Collections;
+import java.nio.charset.StandardCharsets;
 
 public class Ble {
 
@@ -24,12 +24,8 @@ public class Ble {
 //        String result = tesseract.doOCR(image, new Rectangle(860,420,160,80));
         String result = tesseract.doOCR(image);
         try {
-            Charset charset = Charset.forName("UTF-8");
-            InputStreamFactory isf = new InputStreamFactory() {
-                public InputStream createInputStream() throws IOException {
-                    return new FileInputStream("src/main/resources/tessdata/mobygames.train");
-                }
-            };
+            Charset charset = StandardCharsets.UTF_8;
+            InputStreamFactory isf = () -> new FileInputStream("src/main/resources/tessdata/mobygames.train");
             ObjectStream<String> lineStream = new PlainTextByLineStream(isf, charset);
             ObjectStream<NameSample> sampleStream = new NameSampleDataStream(lineStream);
             TokenNameFinderModel model;
@@ -41,13 +37,8 @@ public class Ble {
             } finally {
                 sampleStream.close();
             }
-            OutputStream modelOut=null;
-            try {
-                modelOut = new BufferedOutputStream(new FileOutputStream("src/main/resources/tessdata/en-ner-person.train"));
+            try (OutputStream modelOut = new BufferedOutputStream(new FileOutputStream("src/main/resources/tessdata/en-ner-person.train"))) {
                 model.serialize(modelOut);
-            } finally {
-                if (modelOut != null)
-                    modelOut.close();
             }
         } catch (Throwable e) {
             System.out.println("???????????");

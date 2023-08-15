@@ -5,6 +5,7 @@ import opennlp.tools.namefind.NameFinderME;
 import opennlp.tools.namefind.TokenNameFinderModel;
 import opennlp.tools.util.Span;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.WordUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,7 +20,8 @@ public class MobygamesHelper {
     private static final Logger logger = LoggerFactory.getLogger(MobygamesHelper.class);
 
     public static Map<String, String> reworkResultDevUnder(Map<Path, String> filesWithText,
-                                                           boolean nicknameDetect) throws IOException {
+                                                           boolean nicknameDetect,
+                                                           boolean capitalizeDevNames) throws IOException {
         if (logger.isDebugEnabled()) {
             logger.debug("starting reworkResultDevUnder with " + filesWithText + ", nicknameDetect " + nicknameDetect);
         }
@@ -119,7 +121,8 @@ public class MobygamesHelper {
 
     public static Map<String, String> reworkResultDevNext(Map<Path, String> filesWithText,
                                                           boolean twoWordNames,
-                                                          boolean nicknameDetect) throws IOException {
+                                                          boolean nicknameDetect,
+                                                          boolean capitalizeDevNames) throws IOException {
         if (logger.isDebugEnabled()) {
             logger.debug("starting reworkResultDevNext with " + filesWithText
                     + ", nicknameDetect " + nicknameDetect + ", twoWordNames " + twoWordNames);
@@ -166,7 +169,7 @@ public class MobygamesHelper {
                         groupStarted = true;
                         AbstractMap.SimpleEntry<String, String> analyzedLine =
                                 roleToDevName(lineString, nameFinderME, twoWordNames,
-                                        roleStarted,
+                                        roleStarted, capitalizeDevNames,
                                         getPreviousFromList(producerStringList, 1),
                                         getPreviousFromList(producerStringList, 2));
                         if (analyzedLine.getValue() != null) {
@@ -193,7 +196,7 @@ public class MobygamesHelper {
                         roleStarted = false;
                         if (nextLine != null) {
                             AbstractMap.SimpleEntry<String, String> analyzedLine =
-                                    roleToDevName(nextLine, nameFinderME, twoWordNames, roleStarted,
+                                    roleToDevName(nextLine, nameFinderME, twoWordNames, roleStarted, capitalizeDevNames,
                                             getPreviousFromList(producerStringList, 1),
                                             getPreviousFromList(producerStringList, 2));
                             if (analyzedLine.getValue() != null) {
@@ -214,7 +217,7 @@ public class MobygamesHelper {
                     lineString = getRidOfNicknames(lineString);
                     AbstractMap.SimpleEntry<String, String> analyzedLine =
                             roleToDevName(lineString, nameFinderME, twoWordNames,
-                                    roleStarted, getPreviousFromList(producerStringList, 1),
+                                    roleStarted, capitalizeDevNames, getPreviousFromList(producerStringList, 1),
                                     getPreviousFromList(producerStringList, 2));
                     if (analyzedLine.getValue() != null) {
                         if (analyzedLine.getKey().isEmpty()) {
@@ -288,6 +291,7 @@ public class MobygamesHelper {
                                                                          NameFinderME nameFinderME,
                                                                          boolean twoWordNames,
                                                                          boolean roleStarted,
+                                                                         boolean capitalizeDevNames,
                                                                          String previousAppend,
                                                                          String appendBeforePreviousAppend) {
         //assuming line is: 3D Artist John Smith - we want to get 2 last words and check if this is a name
@@ -313,9 +317,10 @@ public class MobygamesHelper {
         }
         String roleBuilderLine = roleBulder.toString().trim();
         String nameBuilderLine = nameBuilder.toString().trim();
+        if (capitalizeDevNames){
+            nameBuilderLine = WordUtils.capitalizeFully(nameBuilderLine);
+        }
         lineDividedByWhiteSpace = null;
-        roleBulder = null;
-        nameBuilder = null;
         if (logger.isDebugEnabled()) {
             logger.debug("roleBuilderLine " + roleBuilderLine + ", nameBuilderLine " + nameBuilderLine);
         }
@@ -331,17 +336,21 @@ public class MobygamesHelper {
             if (nameSpans.length == 0) {
                 //??????????
                 nameSpans = null;
+                roleBulder = null;
+                nameBuilder = null;
                 return new AbstractMap.SimpleEntry<>(lineString, null);
             } else {
                 nameSpans = null;
+                roleBulder = null;
+                nameBuilder = null;
                 return new AbstractMap.SimpleEntry<>(roleBuilderLine, nameBuilderLine);
             }
         }
     }
 
     private static String getRidOfNicknames(String lineWithNick) {
-        if (logger.isErrorEnabled()) {
-            logger.error("starting getRidOfNicknames with " + lineWithNick);
+        if (logger.isDebugEnabled()) {
+            logger.debug("starting getRidOfNicknames with " + lineWithNick);
         }
         lineWithNick = lineWithNick.replace("“", "'")
                 .replace("”", "'")

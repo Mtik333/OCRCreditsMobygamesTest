@@ -29,23 +29,26 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Controller
 public class GreetingController {
 
     private static final Logger logger = LoggerFactory.getLogger(GreetingController.class);
-    private SessionHolder sessionHolder;
+    private final SessionHolder sessionHolder;
 
     @Autowired
-    public GreetingController(SessionHolder sessionHolder){
-        this.sessionHolder=sessionHolder;
+    public GreetingController(SessionHolder sessionHolder) {
+        this.sessionHolder = sessionHolder;
     }
 
+    @SuppressWarnings("unused")
     @GetMapping("/greeting")
     public String greeting() {
         return "greeting";
     }
 
+    @SuppressWarnings("unused")
     @PostMapping("/fullcredits")
     @ResponseBody
     public ResponseEntity<Map<String, String>> getFullCreditsText(HttpSession session,
@@ -60,6 +63,7 @@ public class GreetingController {
                                                                   @RequestParam(value = "groupItAll") boolean groupItAll,
                                                                   @RequestParam(value = "twoWordNames") boolean twoWordNames,
                                                                   @RequestParam(value = "nicknameDetect") boolean nicknameDetect,
+                                                                  @RequestParam(value = "capitalizeDevNames") boolean capitalizeDevNames,
                                                                   @RequestParam(value = "roleDevLayout") Integer roleDevLayout) {
         if (logger.isDebugEnabled()) {
             logger.debug("starting getFullCreditsText with segMode " + segMode + ", ocrEngineMode " + ocrEngineMode
@@ -69,16 +73,16 @@ public class GreetingController {
         }
         Map<String, String> allResults = null;
         try {
-            if (sessionHolder.getSessionToResults()==null){
+            if (sessionHolder.getSessionToResults() == null) {
                 sessionHolder.setSessionToResults(new HashMap<>());
             }
             ResultsHolder resultsHolder = sessionHolder.getSessionToResults().get(session.getId());
-            if (resultsHolder!=null){
+            if (resultsHolder != null) {
                 resultsHolder.setResultsPerFile(null);
                 resultsHolder.setAllFiles(null);
             } else {
                 resultsHolder = new ResultsHolder();
-                sessionHolder.getSessionToResults().put(session.getId(),resultsHolder);
+                sessionHolder.getSessionToResults().put(session.getId(), resultsHolder);
             }
             Rectangle rectangle = null;
             if (propX != null) {
@@ -101,32 +105,34 @@ public class GreetingController {
             if (logger.isDebugEnabled()) {
                 logger.debug("path to folder " + pathToFolder);
             }
-            List<Path> allFiles = Files.list(pathToFolder).collect(Collectors.toList());
-            if (isBlack) {
-                allFiles = allFiles.stream().filter(path -> path.getFileName().toString().contains("invert"))
-                        .sorted(Comparator.comparing(Object::toString))
-                        .collect(Collectors.toList());
-            } else {
-                allFiles = allFiles.stream().filter(path -> !path.getFileName().toString().contains("invert"))
-                        .sorted(Comparator.comparing(Object::toString))
-                        .collect(Collectors.toList());
-            }
-            resultsHolder.setAllFiles(allFiles);
-            if (logger.isDebugEnabled()) {
-                logger.debug("allFiles size " + allFiles.size());
-            }
             Map<Path, String> resultsPerFile = new TreeMap<>();
-            resultsHolder.setResultsPerFile(resultsPerFile);
-            resultsHolder.performReading(tesseractInstance,segMode,ocrEngineMode,rectangle,replaceComma);
-            rectangle=null;
-            tesseractInstance=null;
-            allFiles=null;
-            pathToFolder=null;
+            try (Stream<Path> allPaths = Files.list(pathToFolder)){
+                List<Path> allFiles = allPaths.collect(Collectors.toList());
+                if (isBlack) {
+                    allFiles = allFiles.stream().filter(path -> path.getFileName().toString().contains("invert"))
+                            .sorted(Comparator.comparing(Object::toString))
+                            .collect(Collectors.toList());
+                } else {
+                    allFiles = allFiles.stream().filter(path -> !path.getFileName().toString().contains("invert"))
+                            .sorted(Comparator.comparing(Object::toString))
+                            .collect(Collectors.toList());
+                }
+                resultsHolder.setAllFiles(allFiles);
+                if (logger.isDebugEnabled()) {
+                    logger.debug("allFiles size " + allFiles.size());
+                }
+                resultsHolder.setResultsPerFile(resultsPerFile);
+                resultsHolder.performReading(tesseractInstance, segMode, ocrEngineMode, rectangle, replaceComma);
+                allFiles = null;
+            }
+            rectangle = null;
+            tesseractInstance = null;
+            pathToFolder = null;
             if (groupItAll) {
                 if (roleDevLayout == 0) {
-                    allResults = MobygamesHelper.reworkResultDevUnder(resultsPerFile, nicknameDetect);
+                    allResults = MobygamesHelper.reworkResultDevUnder(resultsPerFile, nicknameDetect, capitalizeDevNames);
                 } else if (roleDevLayout == 1) {
-                    allResults = MobygamesHelper.reworkResultDevNext(resultsPerFile, twoWordNames, nicknameDetect);
+                    allResults = MobygamesHelper.reworkResultDevNext(resultsPerFile, twoWordNames, nicknameDetect, capitalizeDevNames);
                 }
                 if (logger.isDebugEnabled()) {
                     logger.debug("returning to page");
@@ -150,11 +156,12 @@ public class GreetingController {
         } catch (Throwable thr) {
             allResults = new HashMap<>();
             allResults.put(thr.getMessage(), Arrays.toString(thr.getStackTrace()));
-            thr.printStackTrace();
+            logger.error(thr.getMessage(), thr);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(allResults);
         }
     }
 
+    @SuppressWarnings("unused")
     @PostMapping("/testupload")
     @ResponseBody
     public ResponseEntity<String> getTextFromImage(HttpSession session,
@@ -170,6 +177,7 @@ public class GreetingController {
                                                    @RequestParam(value = "groupItAll") boolean groupItAll,
                                                    @RequestParam(value = "twoWordNames") boolean twoWordNames,
                                                    @RequestParam(value = "nicknameDetect") boolean nicknameDetect,
+                                                   @RequestParam(value = "capitalizeDevNames") boolean capitalizeDevNames,
                                                    @RequestParam(value = "roleDevLayout") Integer roleDevLayout
     ) {
         if (logger.isDebugEnabled()) {
@@ -214,26 +222,36 @@ public class GreetingController {
             }
             Map<Path, String> resultsPerFile = new TreeMap<>();
             resultsPerFile.put(pathToFile, result2);
-            Map<String, String> allResults = null;
+            Map<String, String> allResults;
             if (groupItAll) {
                 if (roleDevLayout == 0) {
-                    allResults = MobygamesHelper.reworkResultDevUnder(resultsPerFile, nicknameDetect);
+                    allResults = MobygamesHelper.reworkResultDevUnder(resultsPerFile, nicknameDetect, capitalizeDevNames);
                 } else if (roleDevLayout == 1) {
-                    allResults = MobygamesHelper.reworkResultDevNext(resultsPerFile, twoWordNames, nicknameDetect);
+                    allResults = MobygamesHelper.reworkResultDevNext(resultsPerFile, twoWordNames, nicknameDetect, capitalizeDevNames);
+                } else {
+                    allResults = new HashMap<>();
+                }
+                String fileIdName=null;
+                for (Map.Entry<Path, String> entry : resultsPerFile.entrySet()) {
+                    fileIdName = entry.getKey().getFileName().toString();
+                    fileIdName = fileIdName.replace("invert_", "");
+                    fileIdName = fileIdName.substring(0, fileIdName.indexOf("."));
+                    allResults.put(fileIdName, HtmlEncoder.encode(entry.getValue()));
                 }
                 if (logger.isDebugEnabled()) {
                     logger.debug("return to page with grouping " + result2);
                 }
-                return ResponseEntity.status(HttpStatus.OK).body(allResults.get(pathToFile));
+                return ResponseEntity.status(HttpStatus.OK).body(allResults.get(fileIdName));
             } else {
                 return ResponseEntity.status(HttpStatus.OK).body(HtmlEncoder.encode(result2));
             }
         } catch (Throwable thr) {
-            thr.printStackTrace();
+            logger.error(thr.getMessage(), thr);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(thr.getMessage());
         }
     }
 
+    @SuppressWarnings("unused")
     @PostMapping("/inittestupload")
     @ResponseBody
     public ResponseEntity<String> uploadImageToBackend(HttpSession session,
@@ -252,25 +270,29 @@ public class GreetingController {
             }
             Arrays.stream(files).forEach(file -> {
                 try {
-                    Path targetPath = subPath.resolve(file.getOriginalFilename());
-                    if (targetPath.toFile().exists()) {
-                        targetPath.toFile().delete();
-                    }
-                    Files.copy(file.getInputStream(), targetPath);
-                    if (isBlack) {
-                        NameModelHelper.invertImage(targetPath, file.getOriginalFilename(), grayScale);
+                    if (file.getOriginalFilename()!=null){
+                        Path targetPath = subPath.resolve(file.getOriginalFilename());
+                        if (targetPath.toFile().exists()) {
+                            boolean delete =targetPath.toFile().delete();
+                        }
+                        Files.copy(file.getInputStream(), targetPath);
+                        if (isBlack) {
+                            NameModelHelper.invertImage(targetPath, file.getOriginalFilename(), grayScale);
+                        }
                     }
                 } catch (IOException e) {
+                    logger.error(e.getMessage(), e);
                     throw new RuntimeException(e);
                 }
             });
             return ResponseEntity.status(HttpStatus.OK).body("ok");
         } catch (Throwable thr) {
-            thr.printStackTrace();
+            logger.error(thr.getMessage(), thr);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(thr.getMessage());
         }
     }
 
+    @SuppressWarnings("unused")
     @PostMapping("/cleandir")
     @ResponseBody
     public ResponseEntity<String> cleanSessionImagesDirectory(HttpSession session) {
@@ -295,12 +317,13 @@ public class GreetingController {
         return ResponseEntity.status(HttpStatus.OK).body("done");
     }
 
+    @SuppressWarnings("unused")
     @GetMapping("/getstatus")
     @ResponseBody
-    public ResponseEntity<AbstractMap.Entry<String,String>> getTextFromImage(HttpSession session){
-        if (sessionHolder.getSessionToResults()!=null){
+    public ResponseEntity<AbstractMap.Entry<String, String>> getTextFromImage(HttpSession session) {
+        if (sessionHolder.getSessionToResults() != null) {
             return ResponseEntity.status(HttpStatus.OK).body(
-                sessionHolder.getSessionToResults().get(session.getId()).giveFeedback());
+                    sessionHolder.getSessionToResults().get(session.getId()).giveFeedback());
         } else {
             return ResponseEntity.status(HttpStatus.OK).body(
                     new AbstractMap.SimpleEntry<>("ocr", "Starting the process..."));
