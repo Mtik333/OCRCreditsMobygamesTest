@@ -12,10 +12,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
-import java.util.AbstractMap;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class MobygamesHelper {
 
@@ -88,7 +85,7 @@ public class MobygamesHelper {
                 if (lineString.isBlank()) {
                     if (!roleStarted) {
                         producedString.append("\n");
-                    } else {
+                    } else if (nextLine != null) {
                         devToAppend = !isNotHumanName(nextLine, nameFinderME);
                         if (!devToAppend) {
                             producedString.append("\n");
@@ -145,7 +142,8 @@ public class MobygamesHelper {
         boolean devToAppend = false;
         Map<String, String> reworkedMap = new HashMap<>();
         for (Map.Entry<Path, String> entry : filesWithText.entrySet()) {
-            StringBuilder producedString = new StringBuilder();
+            List<String> producerStringList = new ArrayList<>();
+//            StringBuilder producedString = new StringBuilder();
             String[] splitTextByNewline = entry.getValue().split("\n");
             for (int i = 0; i < splitTextByNewline.length; i++) {
                 String lineString = splitTextByNewline[i];
@@ -163,38 +161,49 @@ public class MobygamesHelper {
                     //check if next line is empty - if yes then it is a group
                     //otherwise push group to stringbuilder
                     if (nextLine != null && !nextLine.isBlank()) {
-                        producedString.append("<Insert Group Title Here>").append("\n\n");
+//                        producedString.append("<Insert Group Title Here>\n").append("\n");
+                        producerStringList.add("<Insert Group Title Here>\n");
                         groupStarted = true;
                         AbstractMap.SimpleEntry<String, String> analyzedLine =
-                                roleToDevName(lineString, nameFinderME, twoWordNames);
+                                roleToDevName(lineString, nameFinderME, twoWordNames,
+                                        roleStarted,
+                                        getPreviousFromList(producerStringList, 1),
+                                        getPreviousFromList(producerStringList, 2));
                         if (analyzedLine.getValue() != null) {
-                            producedString.append(analyzedLine.getKey()).append("\n").append(analyzedLine.getValue());
+//                            producedString.append(analyzedLine.getKey()).append("\n").append(analyzedLine.getValue());
+                            producerStringList.add(analyzedLine.getKey() + ("\n") + analyzedLine.getValue());
                         } else {
-                            producedString.append(lineString).append("\n");
+//                            producedString.append(lineString).append("\n");
+                            producerStringList.add(lineString);
                         }
                         roleStarted = isNotHumanName(lineString, nameFinderME);
                         continue;
                     } else {
                         groupStarted = true;
-                        producedString.append(lineString).append("\n");
+//                        producedString.append(lineString).append("\n");
+                        producerStringList.add(lineString);
                         continue;
                     }
                 }
                 if (lineString.isBlank()) {
                     if (!roleStarted) {
-                        producedString.append("\n");
+//                        producedString.append("\n");
+                        producerStringList.add("");
                     } else {
+                        roleStarted = false;
                         if (nextLine != null) {
                             AbstractMap.SimpleEntry<String, String> analyzedLine =
-                                    roleToDevName(nextLine, nameFinderME, twoWordNames);
-
+                                    roleToDevName(nextLine, nameFinderME, twoWordNames, roleStarted,
+                                            getPreviousFromList(producerStringList, 1),
+                                            getPreviousFromList(producerStringList, 2));
                             if (analyzedLine.getValue() != null) {
-                                logger.warn("not sure why i got here with " + analyzedLine);
+                                producerStringList.add("");
                             } else {
                                 nextLine = getRidOfNicknames(nextLine);
                                 devToAppend = !isNotHumanName(nextLine, nameFinderME);
                                 if (!devToAppend) {
-                                    producedString.append("\n\n");
+//                                    producedString.append("\n\n");
+                                    producerStringList.add("");
                                 }
                                 roleStarted = false;
                                 groupStarted = false;
@@ -202,35 +211,44 @@ public class MobygamesHelper {
                         }
                     }
                 } else {
+                    lineString = getRidOfNicknames(lineString);
                     AbstractMap.SimpleEntry<String, String> analyzedLine =
-                            roleToDevName(lineString, nameFinderME, twoWordNames);
+                            roleToDevName(lineString, nameFinderME, twoWordNames,
+                                    roleStarted, getPreviousFromList(producerStringList, 1),
+                                    getPreviousFromList(producerStringList, 2));
                     if (analyzedLine.getValue() != null) {
                         if (analyzedLine.getKey().isEmpty()) {
-                            producedString.append("\n").append(lineString);
+//                            producedString.append("\n").append(lineString);
+                            producerStringList.add(lineString);
                         } else {
                             if (roleStarted) {
-                                producedString.append("\n\n");
+//                                producedString.append("\n\n");
+                                producerStringList.add("");
                             }
-                            producedString.append(analyzedLine.getKey()).append("\n").append(analyzedLine.getValue());
+//                            producedString.append(analyzedLine.getKey()).append("\n").append(analyzedLine.getValue());
+                            producerStringList.add(analyzedLine.getKey() + "\n" + analyzedLine.getValue());
                             roleStarted = true;
                         }
                     } else {
                         if (roleStarted) {
-                            producedString.append("\n");
+//                            producedString.append("\n");
+                            producerStringList.add("");
                         }
-                        producedString.append(lineString).append("\n");
+//                        producedString.append(lineString).append("\n");
+                        producerStringList.add(lineString);
                     }
                 }
             }
             String fileIdName = entry.getKey().getFileName().toString();
             fileIdName = fileIdName.replace("invert_", "");
             fileIdName = fileIdName.substring(0, fileIdName.indexOf("."));
-            String resultOfTool = producedString.toString();
+//            String resultOfTool = producedString.toString();
+            String resultOfTool2 = String.join("\n", producerStringList);
             if (logger.isDebugEnabled()) {
-                logger.debug("adding entry: " + fileIdName + ", value: " + resultOfTool);
+                logger.debug("adding entry: " + fileIdName + ", value: " + resultOfTool2);
             }
-            reworkedMap.put(fileIdName, HtmlEncoder.encode(resultOfTool));
-            resultOfTool= null;
+            reworkedMap.put(fileIdName, HtmlEncoder.encode(resultOfTool2));
+            resultOfTool2 = null;
         }
         return reworkedMap;
     }
@@ -255,7 +273,7 @@ public class MobygamesHelper {
             Span firstSpan = nameSpans[0];
             if (firstSpan.getStart() != 0) {
                 roleStarted = true;
-                firstSpan=null;
+                firstSpan = null;
             }
         }
         if (logger.isDebugEnabled()) {
@@ -268,10 +286,16 @@ public class MobygamesHelper {
 
     private static AbstractMap.SimpleEntry<String, String> roleToDevName(String lineString,
                                                                          NameFinderME nameFinderME,
-                                                                         boolean twoWordNames) {
+                                                                         boolean twoWordNames,
+                                                                         boolean roleStarted,
+                                                                         String previousAppend,
+                                                                         String appendBeforePreviousAppend) {
         //assuming line is: 3D Artist John Smith - we want to get 2 last words and check if this is a name
         if (logger.isDebugEnabled()) {
             logger.debug("starting roleToDevName with " + lineString + ", twoWordNames " + twoWordNames);
+        }
+        if (roleStarted && !previousAppend.isBlank() && !appendBeforePreviousAppend.isBlank()) {
+            return new AbstractMap.SimpleEntry<>("", lineString);
         }
         String[] lineDividedByWhiteSpace = lineString.split(" ");
         int divisionIndex = lineDividedByWhiteSpace.length - 2;
@@ -289,9 +313,9 @@ public class MobygamesHelper {
         }
         String roleBuilderLine = roleBulder.toString().trim();
         String nameBuilderLine = nameBuilder.toString().trim();
-        lineDividedByWhiteSpace=null;
-        roleBulder=null;
-        nameBuilder=null;
+        lineDividedByWhiteSpace = null;
+        roleBulder = null;
+        nameBuilder = null;
         if (logger.isDebugEnabled()) {
             logger.debug("roleBuilderLine " + roleBuilderLine + ", nameBuilderLine " + nameBuilderLine);
         }
@@ -316,33 +340,47 @@ public class MobygamesHelper {
     }
 
     private static String getRidOfNicknames(String lineWithNick) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("starting getRidOfNicknames with " + lineWithNick);
+        if (logger.isErrorEnabled()) {
+            logger.error("starting getRidOfNicknames with " + lineWithNick);
         }
-        boolean nicknameExists = (StringUtils.countMatches(lineWithNick, "'") +
-                StringUtils.countMatches(lineWithNick, "\"") +
-                StringUtils.countMatches(lineWithNick, "’")) == 2;
+        lineWithNick = lineWithNick.replace("“", "'")
+                .replace("”", "'")
+                .replace("\"", "'")
+                .replace("’", "'");
+        boolean nicknameExists = StringUtils.countMatches(lineWithNick, "'") == 2;
         if (logger.isDebugEnabled()) {
             logger.debug("nicknameExists " + nicknameExists);
         }
         if (nicknameExists) {
-            lineWithNick = lineWithNick.replace("’", "'").replace("\"", "'");
-            int firstIndex = lineWithNick.indexOf("'");
-            int lastIndex = lineWithNick.lastIndexOf("'");
-            if (firstIndex==0 && lastIndex==lineWithNick.length()-1){
-                //this basically means the whole phrase is in quotation marks so there's no nickname
+            try {
+                lineWithNick = lineWithNick.replace("’", "'").replace("\"", "'");
+                int firstIndex = lineWithNick.indexOf("'");
+                int lastIndex = lineWithNick.lastIndexOf("'");
+                if (firstIndex == 0 && lastIndex == lineWithNick.length() - 1) {
+                    //this basically means the whole phrase is in quotation marks so there's no nickname
+                    return lineWithNick;
+                }
+                String nickName = lineWithNick.substring(firstIndex + 1, lastIndex);
+                String finalName = lineWithNick.substring(0, firstIndex - 1) + lineWithNick.substring(lastIndex + 1) + " ('" + nickName + "')";
+                if (logger.isDebugEnabled()) {
+                    logger.debug("finalName " + finalName);
+                }
+                nickName = null;
+                lineWithNick = null;
+                return finalName.trim();
+            } catch (Throwable thr) {
+                logger.warn("couldnt fix nickname but it might be because of some OCR issue: " + lineWithNick);
                 return lineWithNick;
             }
-            String nickName = lineWithNick.substring(firstIndex + 1, lastIndex);
-            String finalName = lineWithNick.substring(0, firstIndex - 1) + lineWithNick.substring(lastIndex + 1) + " ('" + nickName + "')";
-            if (logger.isDebugEnabled()) {
-                logger.debug("finalName " + finalName);
-            }
-            nickName = null;
-            lineWithNick = null;
-            return finalName.trim();
         } else {
             return lineWithNick;
         }
+    }
+
+    private static String getPreviousFromList(List<String> appended, int back) {
+        int backIndex = appended.size() - back;
+        if (backIndex > 0) {
+            return appended.get(backIndex);
+        } else return "";
     }
 }
