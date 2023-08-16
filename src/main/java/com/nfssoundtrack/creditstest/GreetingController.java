@@ -106,7 +106,7 @@ public class GreetingController {
                 logger.debug("path to folder " + pathToFolder);
             }
             Map<Path, String> resultsPerFile = new TreeMap<>();
-            try (Stream<Path> allPaths = Files.list(pathToFolder)){
+            try (Stream<Path> allPaths = Files.list(pathToFolder)) {
                 List<Path> allFiles = allPaths.collect(Collectors.toList());
                 if (isBlack) {
                     allFiles = allFiles.stream().filter(path -> path.getFileName().toString().contains("invert"))
@@ -231,7 +231,7 @@ public class GreetingController {
                 } else {
                     allResults = new HashMap<>();
                 }
-                String fileIdName=null;
+                String fileIdName = null;
                 for (Map.Entry<Path, String> entry : resultsPerFile.entrySet()) {
                     fileIdName = entry.getKey().getFileName().toString();
                     fileIdName = fileIdName.replace("invert_", "");
@@ -268,14 +268,29 @@ public class GreetingController {
             if (!subPath.toFile().exists()) {
                 Files.createDirectory(subPath);
             }
+            if (sessionHolder.getSessionToUploads() == null) {
+                sessionHolder.setSessionToUploads(new HashMap<>());
+            }
+            UploadHolder uploadHolder = sessionHolder.getSessionToUploads().get(session.getId());
+            if (uploadHolder != null) {
+                uploadHolder.setUploadedFiles(0);
+                uploadHolder.setAllFiles(files.length);
+            } else {
+                uploadHolder = new UploadHolder();
+                uploadHolder.setUploadedFiles(0);
+                uploadHolder.setAllFiles(files.length);
+                sessionHolder.getSessionToUploads().put(session.getId(), uploadHolder);
+            }
+            UploadHolder finalUploadHolder = uploadHolder;
             Arrays.stream(files).forEach(file -> {
                 try {
-                    if (file.getOriginalFilename()!=null){
+                    if (file.getOriginalFilename() != null) {
                         Path targetPath = subPath.resolve(file.getOriginalFilename());
                         if (targetPath.toFile().exists()) {
-                            boolean delete =targetPath.toFile().delete();
+                            boolean delete = targetPath.toFile().delete();
                         }
                         Files.copy(file.getInputStream(), targetPath);
+                        finalUploadHolder.setUploadedFiles(finalUploadHolder.getUploadedFiles() + 1);
                         if (isBlack) {
                             NameModelHelper.invertImage(targetPath, file.getOriginalFilename(), grayScale);
                         }
@@ -324,6 +339,19 @@ public class GreetingController {
         if (sessionHolder.getSessionToResults() != null) {
             return ResponseEntity.status(HttpStatus.OK).body(
                     sessionHolder.getSessionToResults().get(session.getId()).giveFeedback());
+        } else {
+            return ResponseEntity.status(HttpStatus.OK).body(
+                    new AbstractMap.SimpleEntry<>("ocr", "Starting the process..."));
+        }
+    }
+
+    @SuppressWarnings("unused")
+    @GetMapping("/getuploadstatus")
+    @ResponseBody
+    public ResponseEntity<AbstractMap.Entry<String, String>> getUploadStatus(HttpSession session) {
+        if (sessionHolder.getSessionToUploads() != null) {
+            return ResponseEntity.status(HttpStatus.OK).body(
+                    sessionHolder.getSessionToUploads().get(session.getId()).giveFeedback());
         } else {
             return ResponseEntity.status(HttpStatus.OK).body(
                     new AbstractMap.SimpleEntry<>("ocr", "Starting the process..."));

@@ -69,8 +69,8 @@
         <input type="checkbox" id="capitalizeDevNames" value="true"><label for="capitalizeDevNames">Try to correct
             UPPERCASE DEV NAMES</label>
         <br>
-        <label for="previewResolution">Define resolution of images preview</label><select id="previewResolution"
-            onchange="modifyResolution()">
+        <label for="previewResolution">Define resolution of images preview (used after the OCR is done)</label><select id="previewResolution"
+            onchange="modifyResolution()" disabled>
             <option value="0" selected="selected">Original resolution</option>
             <option value="1">640x480</option>
             <option value="2">800x600</option>
@@ -110,13 +110,15 @@
             </div>
         </div>
         <div id="dialog" title="Loading...">
-            Dialog will close once OCRing is done...
+            Dialog will close once process is done...
         </div>
     </div>
     <script>
         var allImageFiles;
         var reportStatus;
+        var uploadStatus;
         var basicHtml;
+        var preDialogValue = "Dialog will close once process is done...";
         $(document).ready(function () {
             const fileInput = document.getElementById('select-image');
             const images = document.getElementById('images');
@@ -229,6 +231,7 @@
             });
             $("#dialog").dialog("open");
             //formData.append('files', targetFiles);
+            uploadStatus = true;
             $.ajax({
                 type: "POST",
                 url: "/inittestupload",
@@ -236,14 +239,17 @@
                 processData: false,
                 data: formData,
                 success: function (data) {
+                    uploadStatus = false;
                     $("#dialog").dialog("close");
                 },
                 error: function (data2) {
+                    uploadStatus = false;
                     //$("#dialog").dialog("close");
                     $("#dialog")[0].innerHTML = data2.responseText;
                     console.log(data2);
                 }
             });
+            checkUploadStatus(basicHtml)
         }
 
         function ocrImage(actualImage) {
@@ -296,6 +302,7 @@
                 processData: false,
                 data: formData,
                 success: function (data) {
+                    uploadStatus = false;
                     var tr = actualImage.parentElement.parentElement.parentElement;
                     var td1 = document.createElement('td');
                     td1.className = 'textToCopy';
@@ -305,11 +312,13 @@
                     tr.appendChild(td1);
                 },
                 error: function (data2) {
+                    uploadStatus = false;
                     $("#dialog")[0].innerHTML = data2.responseText;
                     $("#dialog").dialog("open");
                     console.log(data2);
                 }
             });
+            checkUploadStatus(uploadStatus, basicHtml);
         }
         //$("#00661_invert").Jcrop({setSelect:[50,50,1500,900]});
         function loadImageAsText(i) {
@@ -405,6 +414,7 @@
                 success: function (data) {
                     reportStatus = false;
                     $("#dialog").dialog("close");
+                    $("#previewResolution").prop('disabled', false);
                     var myKeys = Object.keys(data);
                     Array.prototype.forEach.call(myKeys, function (myKey) {
                         var myImg = $("#" + myKey)[0];
@@ -651,6 +661,7 @@
                 $(this)[0].parentElement.style = "width: " + targetWidth + "px; height: " + targetHeight + "px;";
                 //}
             });
+            clearWholeCrop();
             //i.width=640;
             //i.height=480;
         }
@@ -680,6 +691,35 @@
             setTimeout(function () {
                 if (reportStatus) {
                     checkStatus();
+                }
+            }, 3000);
+        }
+
+        function doUploadTimeout(basicHtml) {
+            var formData = new FormData();
+            $.ajax({
+                type: "GET",
+                url: "/getuploadstatus",
+                contentType: false,
+                processData: false,
+                async: false,
+                data: formData,
+                success: function (data) {
+                    $("#dialog")[0].innerHTML = data.ocr;
+                    console.log(data);
+                },
+                error: function (data2) {
+                    console.log(data2);
+                }
+            });
+        }
+
+        function checkUploadStatus(basicHtml) {
+            console.log(uploadStatus);
+            doUploadTimeout(basicHtml);
+            setTimeout(function () {
+                if (uploadStatus) {
+                    checkUploadStatus();
                 }
             }, 3000);
         }
