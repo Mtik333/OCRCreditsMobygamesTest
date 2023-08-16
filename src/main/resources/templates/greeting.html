@@ -48,28 +48,29 @@
         </select>
         <br>
         <input type="checkbox" id="blackBgr" value="black" checked><label for="blackBgr">Dark background and white
-        font</label>
+            font</label>
         <br>
         <input type="checkbox" id="groupItAll" value="true" checked><label for="groupItAll">Try to group/fix output
-        automatically (barely</label>
+            automatically (barely</label>
         developed)
         <br>
         <input type="checkbox" id="replaceComma" value="false" checked><label for="replaceComma">Replace comma with new
-        line</label>
+            line</label>
         <br>
         <input type="checkbox" id="highContrast" value="true" checked><label for="highContrast">Colors of role / dev
-        letters have low contrast</label>
+            letters have low contrast</label>
         <br>
         <input type="checkbox" id="twoWordNames" value="true"><label for="twoWordNames">Do not use OpenNLP to perform
-        name recognition</label>
+            name recognition</label>
         <br>
         <input type="checkbox" id="nicknameDetect" value="true"><label for="nicknameDetect">Try to correct
-        nicknames</label>
+            nicknames</label>
         <br>
         <input type="checkbox" id="capitalizeDevNames" value="true"><label for="capitalizeDevNames">Try to correct
-        UPPERCASE DEV NAMES</label>
+            UPPERCASE DEV NAMES</label>
         <br>
-        <label for="previewResolution">Define resolution of images preview</label><select id="previewResolution" onchange="modifyResolution()">
+        <label for="previewResolution">Define resolution of images preview</label><select id="previewResolution"
+            onchange="modifyResolution()">
             <option value="0" selected="selected">Original resolution</option>
             <option value="1">640x480</option>
             <option value="2">800x600</option>
@@ -92,6 +93,7 @@
         <button id="clearCombinedText">Clear text for all images</button>
         <button id="scrapAll">Delete all images</button>
         <button id="copyCrop" disabled>Copy crop to all images</button>
+        <button id="clearCrop" disabled>Clear crop from all images</button>
         <p id="combinedText" hidden="hidden"></p>
         <div class="preview_image">
 
@@ -135,6 +137,9 @@
             });
             $("#clearCombinedText").on('click', function () {
                 clearWholeText();
+            });
+            $("#clearCrop").on('click', function () {
+                clearWholeCrop();
             });
             $("#scrapAll").on('click', function () {
                 $("#temptable tr").remove();
@@ -476,6 +481,7 @@
         }
 
         function finalCoordinates(widget, e) {
+            $("#clearCrop").prop('disabled', false);
             if (e) {
                 var xCoord = e.cropTarget.pos.x;
                 var yCoord = e.cropTarget.pos.y;
@@ -499,18 +505,91 @@
             var heightCoord = image.tempPropH;
             var widget = image.widget;
             $(".imageToCrop").each(function () {
-                var potentialWidget = $(this)[0].widget;
-                if (!potentialWidget) {
-                    const rect = Jcrop.Rect.fromPoints([xCoord, yCoord], [xCoord + widthCoord, yCoord + heightCoord]);
-                    const jcrop = $(this)[0].stage;
-                    jcrop.newWidget(rect, {});
-                }
-                $(this).prop('tempPropX', xCoord);
-                $(this).prop('tempPropY', yCoord);
-                $(this).prop('tempPropW', widthCoord);
-                $(this).prop('tempPropH', heightCoord);
+                setTimeout(goThroughWidgets, 200, $(this)[0], xCoord, yCoord, widthCoord, heightCoord);
+                // var potentialWidget = $(this)[0].widget;
+                // if (potentialWidget == undefined) {
+                //     const rect = Jcrop.Rect.fromPoints([xCoord, yCoord], [xCoord + widthCoord, yCoord + heightCoord]);
+                //     const jcrop = $(this)[0].stage;
+                //     jcrop.newWidget(rect, {});
+                // } else {
+                //     var img = $(this)[0];
+                //     img.stage.destroy();
+                //     Jcrop.load(img).then(img => {
+                //         var stage = Jcrop.attach(img, {
+                //             onRelease: finalCoordinates
+                //         });
+                //         img.stage = stage;
+                //         stage.listen('crop.change', (widget, e) => {
+                //             finalCoordinates(widget, e);
+                //         });
+                //         const rect = Jcrop.Rect.fromPoints([xCoord, yCoord], [xCoord + widthCoord, yCoord + heightCoord]);
+                //         const jcrop = img.stage;
+                //         var newWidget = jcrop.newWidget(rect, {});
+                //         $(this)[0].widget = newWidget;
+                //     });
+                // }
+                // $(this).prop('tempPropX', xCoord);
+                // $(this).prop('tempPropY', yCoord);
+                // $(this).prop('tempPropW', widthCoord);
+                // $(this).prop('tempPropH', heightCoord);
             });
         }
+
+        function goThroughWidgets(inputImage, xCoord, yCoord, widthCoord, heightCoord) {
+            var potentialWidget = inputImage.widget;
+            // if (potentialWidget == undefined) {
+            //     if (inputImage.stage != undefined){
+            //         inputImage.stage.destroy();
+            //     }
+            //     const rect = Jcrop.Rect.fromPoints([xCoord, yCoord], [xCoord + widthCoord, yCoord + heightCoord]);
+            //     const jcrop = inputImage.stage;
+            //     jcrop.newWidget(rect, {});
+            // } else {
+            var img = inputImage;
+            // reinitStage(img);
+            img.stage.destroy();
+            // img.removeAttribute('style');
+            Jcrop.load(img).then(img => {
+                var stage = Jcrop.attach(img, {
+                    onRelease: finalCoordinates
+                });
+                img.stage = stage;
+                stage.listen('crop.change', (widget, e) => {
+                    finalCoordinates(widget, e);
+                });
+                const rect = Jcrop.Rect.fromPoints([xCoord, yCoord], [xCoord + widthCoord, yCoord + heightCoord]);
+                const jcrop = img.stage;
+                console.log("SADKSAJDKLSADA");
+                var newWidget = jcrop.newWidget(rect, {});
+                $(this)[0].widget = newWidget;
+            });
+            // }
+            $(this).prop('tempPropX', xCoord);
+            $(this).prop('tempPropY', yCoord);
+            $(this).prop('tempPropW', widthCoord);
+            $(this).prop('tempPropH', heightCoord);
+        }
+
+        // async function destroyStage(img){
+        //     img.stage.destroy();
+        // }
+
+        // async function reinitStage(img){
+        //     await destroyStage();
+        //     Jcrop.load(img).then(img => {
+        //             var stage = Jcrop.attach(img, {
+        //                 onRelease: finalCoordinates
+        //             });
+        //             img.stage = stage;
+        //             stage.listen('crop.change', (widget, e) => {
+        //                 finalCoordinates(widget, e);
+        //             });
+        //             const rect = Jcrop.Rect.fromPoints([xCoord, yCoord], [xCoord + widthCoord, yCoord + heightCoord]);
+        //             const jcrop = img.stage;
+        //             var newWidget = jcrop.newWidget(rect, {});
+        //             $(this)[0].widget = newWidget;
+        //         });
+        // }
 
         function enterToBr(e) {
             // trap the return key being pressed
@@ -598,14 +677,14 @@
         function checkStatus(basicHtml) {
             console.log(reportStatus);
             doTimeout(basicHtml);
-            setTimeout(function(){
-                if (reportStatus){
+            setTimeout(function () {
+                if (reportStatus) {
                     checkStatus();
                 }
             }, 3000);
         }
 
-        function writeToClipboard(result){
+        function writeToClipboard(result) {
             if (typeof (navigator.clipboard) == 'undefined') {
                 console.log('navigator.clipboard');
                 var textArea = document.createElement("textarea");
@@ -624,6 +703,24 @@
             } else {
                 navigator.clipboard.writeText(result);
             }
+        }
+
+        function clearWholeCrop() {
+            $(".imageToCrop").each(function () {
+                const jcrop = $(this)[0].stage;
+                const img = $(this)[0];
+                jcrop.destroy();
+                img.widget = undefined;
+                Jcrop.load(img).then(img => {
+                    var stage = Jcrop.attach(img, {
+                        onRelease: finalCoordinates
+                    });
+                    img.stage = stage;
+                    stage.listen('crop.change', (widget, e) => {
+                        finalCoordinates(widget, e);
+                    });
+                });
+            });
         }
     </script>
 </body>

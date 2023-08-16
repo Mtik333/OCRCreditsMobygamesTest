@@ -96,6 +96,9 @@ public class MobygamesHelper {
                     }
                 } else {
                     lineString = getRidOfNicknames(lineString);
+                    if (capitalizeDevNames && roleStarted){
+                        lineString = WordUtils.capitalizeFully(lineString);
+                    }
                     roleStarted = isNotHumanName(lineString, nameFinderME);
                     devToAppend = !roleStarted;
                     producedString.append(lineString).append("\n");
