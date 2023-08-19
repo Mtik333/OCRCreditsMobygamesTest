@@ -21,7 +21,8 @@ public class MobygamesHelper {
 
     public static Map<String, String> reworkResultDevUnder(Map<Path, String> filesWithText,
                                                            boolean nicknameDetect,
-                                                           boolean capitalizeDevNames) throws IOException {
+                                                           boolean capitalizeDevNames,
+                                                           boolean capitalizeRoles) throws IOException {
         if (logger.isDebugEnabled()) {
             logger.debug("starting reworkResultDevUnder with " + filesWithText + ", nicknameDetect " + nicknameDetect);
         }
@@ -66,7 +67,7 @@ public class MobygamesHelper {
                 if (!groupStarted) {
                     //check if next line is empty - if yes then it is a group
                     //otherwise push group to stringbuilder
-                    if (!nextLine.isBlank()) {
+                    if (nextLine!=null && !nextLine.isBlank()) {
                         if (logger.isDebugEnabled()) {
                             logger.debug("custom group created by tool");
                         }
@@ -98,6 +99,8 @@ public class MobygamesHelper {
                     lineString = getRidOfNicknames(lineString);
                     if (capitalizeDevNames && roleStarted){
                         lineString = WordUtils.capitalizeFully(lineString);
+                    } else if (capitalizeRoles){
+                        lineString = WordUtils.capitalizeFully(lineString);
                     }
                     roleStarted = isNotHumanName(lineString, nameFinderME);
                     devToAppend = !roleStarted;
@@ -125,7 +128,8 @@ public class MobygamesHelper {
     public static Map<String, String> reworkResultDevNext(Map<Path, String> filesWithText,
                                                           boolean twoWordNames,
                                                           boolean nicknameDetect,
-                                                          boolean capitalizeDevNames) throws IOException {
+                                                          boolean capitalizeDevNames,
+                                                          boolean capitalizeRoles) throws IOException {
         if (logger.isDebugEnabled()) {
             logger.debug("starting reworkResultDevNext with " + filesWithText
                     + ", nicknameDetect " + nicknameDetect + ", twoWordNames " + twoWordNames);
@@ -172,7 +176,7 @@ public class MobygamesHelper {
                         groupStarted = true;
                         AbstractMap.SimpleEntry<String, String> analyzedLine =
                                 roleToDevName(lineString, nameFinderME, twoWordNames,
-                                        roleStarted, capitalizeDevNames,
+                                        roleStarted, capitalizeDevNames, capitalizeRoles,
                                         getPreviousFromList(producerStringList, 1),
                                         getPreviousFromList(producerStringList, 2));
                         if (analyzedLine.getValue() != null) {
@@ -199,7 +203,7 @@ public class MobygamesHelper {
                         roleStarted = false;
                         if (nextLine != null) {
                             AbstractMap.SimpleEntry<String, String> analyzedLine =
-                                    roleToDevName(nextLine, nameFinderME, twoWordNames, roleStarted, capitalizeDevNames,
+                                    roleToDevName(nextLine, nameFinderME, twoWordNames, roleStarted, capitalizeDevNames, capitalizeRoles,
                                             getPreviousFromList(producerStringList, 1),
                                             getPreviousFromList(producerStringList, 2));
                             if (analyzedLine.getValue() != null) {
@@ -220,7 +224,8 @@ public class MobygamesHelper {
                     lineString = getRidOfNicknames(lineString);
                     AbstractMap.SimpleEntry<String, String> analyzedLine =
                             roleToDevName(lineString, nameFinderME, twoWordNames,
-                                    roleStarted, capitalizeDevNames, getPreviousFromList(producerStringList, 1),
+                                    roleStarted, capitalizeDevNames, capitalizeRoles,
+                                    getPreviousFromList(producerStringList, 1),
                                     getPreviousFromList(producerStringList, 2));
                     if (analyzedLine.getValue() != null) {
                         if (analyzedLine.getKey().isEmpty()) {
@@ -295,6 +300,7 @@ public class MobygamesHelper {
                                                                          boolean twoWordNames,
                                                                          boolean roleStarted,
                                                                          boolean capitalizeDevNames,
+                                                                         boolean capitalizeRoles,
                                                                          String previousAppend,
                                                                          String appendBeforePreviousAppend) {
         //assuming line is: 3D Artist John Smith - we want to get 2 last words and check if this is a name
@@ -322,6 +328,9 @@ public class MobygamesHelper {
         String nameBuilderLine = nameBuilder.toString().trim();
         if (capitalizeDevNames){
             nameBuilderLine = WordUtils.capitalizeFully(nameBuilderLine);
+        }
+        if (capitalizeRoles){
+            roleBuilderLine = WordUtils.capitalizeFully(roleBuilderLine);
         }
         lineDividedByWhiteSpace = null;
         if (logger.isDebugEnabled()) {

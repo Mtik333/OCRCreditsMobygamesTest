@@ -69,6 +69,9 @@
         <input type="checkbox" id="capitalizeDevNames" value="true"><label for="capitalizeDevNames">Try to correct
             UPPERCASE DEV NAMES</label>
         <br>
+        <input type="checkbox" id="capitalizeRoles" value="true"><label for="capitalizeRoles">Try to correct
+            UPPERCASE ROLES</label>
+        <br>
         <label for="previewResolution">Define resolution of images preview (used after the OCR is done)</label><select id="previewResolution"
             onchange="modifyResolution()" disabled>
             <option value="0" selected="selected">Original resolution</option>
@@ -295,6 +298,11 @@
             } else {
                 formData.append('capitalizeDevNames', false);
             }
+            if ($("#capitalizeRoles")[0].checked) {
+                formData.append('capitalizeRoles', true);
+            } else {
+                formData.append('capitalizeRoles', false);
+            }
             $.ajax({
                 type: "POST",
                 url: "/testupload",
@@ -400,6 +408,11 @@
                 formData.append('capitalizeDevNames', true);
             } else {
                 formData.append('capitalizeDevNames', false);
+            }
+            if ($("#capitalizeRoles")[0].checked) {
+                formData.append('capitalizeRoles', true);
+            } else {
+                formData.append('capitalizeRoles', false);
             }
             $("#dialog")[0].innerHTML = "Dialog will close once OCRing is done...";
             $("#dialog").dialog("open");

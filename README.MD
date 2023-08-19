@@ -10,10 +10,10 @@ Well there is a Dockerfile and it provides all the commands necessary to be done
 
 ## Example of usage
 
-Check this example for PGA 2K23
+Check this example for PGA 2K23\
 [![OCR Credits Mobygames Tool PGA 2K23](https://img.youtube.com/vi/CMHLKLidumI/0.jpg)](https://www.youtube.com/watch?v=CMHLKLidumI)
 
-Also this example for F1 Manager 2022
+Also this example for F1 Manager 2022\
 [![OCR Credits MobyGames Tool F1 Manager 2022](https://img.youtube.com/vi/PD7dfzLSFww/0.jpg)](https://www.youtube.com/watch?v=PD7dfzLSFww)
 
 
@@ -29,6 +29,7 @@ There is a bunch of checkboxes to tweak behaviour of the tool so let's briefly r
 - "Do not use OpenNLP to perform name recognition and assume each dev name consists of 2 words" - this is used only for cases when dev names are displayed next to the roles. OpenNLP tool used to detect if text contains name is unable to work properly as I do not have data to train it and make it work, so in this case we just assume that 2 last words in the line will be devs names and so need to be moved to a new line
 - "Try to correct nicknames" - as you might know, we have to escape nicknames when typing such dev into the Mobygames credits: you should not do "Gabe 'GabeN' Newell", but rather "Gabe Newell ('GabeN')". Tick this to make the tool try to do it automatically
 - "Try to correct UPPERCASE DEV NAMES" - as it says, tool tries to change "JOHN SMITH" to "John Smith" - this applies only to dev names
+- "Try to correct UPPERCASE ROLES" - as it says, tool tries to change "ARTIST" to "Artist" - this applies only to roles detected
 
 ### OCR dropdowns
 - "Resolution" dropdown - change it to modify display of the source images on the page (might be useful when you got 1080p screenshots and it takes a lot of space)
