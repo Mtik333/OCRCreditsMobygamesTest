@@ -22,9 +22,17 @@ public class MobygamesHelper {
     public static Map<String, String> reworkResultDevUnder(Map<Path, String> filesWithText,
                                                            boolean nicknameDetect,
                                                            boolean capitalizeDevNames,
-                                                           boolean capitalizeRoles) throws IOException {
+                                                           boolean capitalizeRoles,
+                                                           String uppercaseKeywords) throws IOException {
         if (logger.isDebugEnabled()) {
             logger.debug("starting reworkResultDevUnder with " + filesWithText + ", nicknameDetect " + nicknameDetect);
+        }
+        List<String> keywords = new ArrayList<>();
+        if (uppercaseKeywords != null) {
+            String[] preKeywords = uppercaseKeywords.split(",");
+            for (String keyword : preKeywords) {
+                keywords.add(keyword.trim());
+            }
         }
         InputStream is;
         if (NameModelHelper.isJarMode) {
@@ -67,7 +75,7 @@ public class MobygamesHelper {
                 if (!groupStarted) {
                     //check if next line is empty - if yes then it is a group
                     //otherwise push group to stringbuilder
-                    if (nextLine!=null && !nextLine.isBlank()) {
+                    if (nextLine != null && !nextLine.isBlank()) {
                         if (logger.isDebugEnabled()) {
                             logger.debug("custom group created by tool");
                         }
@@ -97,10 +105,11 @@ public class MobygamesHelper {
                     }
                 } else {
                     lineString = getRidOfNicknames(lineString);
-                    if (capitalizeDevNames && roleStarted){
+                    if (capitalizeDevNames && roleStarted) {
                         lineString = WordUtils.capitalizeFully(lineString);
-                    } else if (capitalizeRoles){
+                    } else if (capitalizeRoles) {
                         lineString = WordUtils.capitalizeFully(lineString);
+                        lineString = uppercaseWithKeywordsConstraint(lineString, keywords);
                     }
                     roleStarted = isNotHumanName(lineString, nameFinderME);
                     devToAppend = !roleStarted;
@@ -129,10 +138,19 @@ public class MobygamesHelper {
                                                           boolean twoWordNames,
                                                           boolean nicknameDetect,
                                                           boolean capitalizeDevNames,
-                                                          boolean capitalizeRoles) throws IOException {
+                                                          boolean capitalizeRoles,
+                                                          String uppercaseKeywords,
+                                                          boolean rolesOnLeft) throws IOException {
         if (logger.isDebugEnabled()) {
             logger.debug("starting reworkResultDevNext with " + filesWithText
                     + ", nicknameDetect " + nicknameDetect + ", twoWordNames " + twoWordNames);
+        }
+        List<String> keywords = new ArrayList<>();
+        if (uppercaseKeywords != null) {
+            String[] preKeywords = uppercaseKeywords.split(",");
+            for (String keyword : preKeywords) {
+                keywords.add(keyword.trim());
+            }
         }
         InputStream is;
         if (NameModelHelper.isJarMode) {
@@ -178,7 +196,8 @@ public class MobygamesHelper {
                                 roleToDevName(lineString, nameFinderME, twoWordNames,
                                         roleStarted, capitalizeDevNames, capitalizeRoles,
                                         getPreviousFromList(producerStringList, 1),
-                                        getPreviousFromList(producerStringList, 2));
+                                        getPreviousFromList(producerStringList, 2),
+                                        keywords, rolesOnLeft);
                         if (analyzedLine.getValue() != null) {
 //                            producedString.append(analyzedLine.getKey()).append("\n").append(analyzedLine.getValue());
                             producerStringList.add(analyzedLine.getKey() + ("\n") + analyzedLine.getValue());
@@ -205,7 +224,8 @@ public class MobygamesHelper {
                             AbstractMap.SimpleEntry<String, String> analyzedLine =
                                     roleToDevName(nextLine, nameFinderME, twoWordNames, roleStarted, capitalizeDevNames, capitalizeRoles,
                                             getPreviousFromList(producerStringList, 1),
-                                            getPreviousFromList(producerStringList, 2));
+                                            getPreviousFromList(producerStringList, 2),
+                                            keywords, rolesOnLeft);
                             if (analyzedLine.getValue() != null) {
                                 producerStringList.add("");
                             } else {
@@ -226,7 +246,8 @@ public class MobygamesHelper {
                             roleToDevName(lineString, nameFinderME, twoWordNames,
                                     roleStarted, capitalizeDevNames, capitalizeRoles,
                                     getPreviousFromList(producerStringList, 1),
-                                    getPreviousFromList(producerStringList, 2));
+                                    getPreviousFromList(producerStringList, 2),
+                                    keywords, rolesOnLeft);
                     if (analyzedLine.getValue() != null) {
                         if (analyzedLine.getKey().isEmpty()) {
 //                            producedString.append("\n").append(lineString);
@@ -302,7 +323,9 @@ public class MobygamesHelper {
                                                                          boolean capitalizeDevNames,
                                                                          boolean capitalizeRoles,
                                                                          String previousAppend,
-                                                                         String appendBeforePreviousAppend) {
+                                                                         String appendBeforePreviousAppend,
+                                                                         List<String> keywords,
+                                                                         boolean rolesOnLeft) {
         //assuming line is: 3D Artist John Smith - we want to get 2 last words and check if this is a name
         if (logger.isDebugEnabled()) {
             logger.debug("starting roleToDevName with " + lineString + ", twoWordNames " + twoWordNames);
@@ -310,27 +333,42 @@ public class MobygamesHelper {
         if (roleStarted && !previousAppend.isBlank() && !appendBeforePreviousAppend.isBlank()) {
             return new AbstractMap.SimpleEntry<>("", lineString);
         }
-        String[] lineDividedByWhiteSpace = lineString.split(" ");
-        int divisionIndex = lineDividedByWhiteSpace.length - 2;
-        if (logger.isDebugEnabled()) {
-            logger.debug("divisionIndex " + divisionIndex);
-        }
         StringBuilder roleBulder = new StringBuilder();
         StringBuilder nameBuilder = new StringBuilder();
-        for (int i = 0; i < lineDividedByWhiteSpace.length; i++) {
-            if (i < divisionIndex) {
-                roleBulder.append(lineDividedByWhiteSpace[i]).append(" ");
-            } else {
-                nameBuilder.append(lineDividedByWhiteSpace[i]).append(" ");
+        String[] lineDividedByWhiteSpace = lineString.split(" ");
+        if (rolesOnLeft) {
+            int divisionIndex = lineDividedByWhiteSpace.length - 2;
+            if (logger.isDebugEnabled()) {
+                logger.debug("divisionIndex " + divisionIndex);
+            }
+            for (int i = 0; i < lineDividedByWhiteSpace.length; i++) {
+                if (i < divisionIndex) {
+                    roleBulder.append(lineDividedByWhiteSpace[i]).append(" ");
+                } else {
+                    nameBuilder.append(lineDividedByWhiteSpace[i]).append(" ");
+                }
+            }
+        } else {
+            int divisionIndex = 1;
+            if (logger.isDebugEnabled()) {
+                logger.debug("divisionIndex " + divisionIndex);
+            }
+            for (int i = 0; i < lineDividedByWhiteSpace.length; i++) {
+                if (i > divisionIndex) {
+                    roleBulder.append(lineDividedByWhiteSpace[i]).append(" ");
+                } else {
+                    nameBuilder.append(lineDividedByWhiteSpace[i]).append(" ");
+                }
             }
         }
         String roleBuilderLine = roleBulder.toString().trim();
         String nameBuilderLine = nameBuilder.toString().trim();
-        if (capitalizeDevNames){
+        if (capitalizeDevNames) {
             nameBuilderLine = WordUtils.capitalizeFully(nameBuilderLine);
         }
-        if (capitalizeRoles){
+        if (capitalizeRoles) {
             roleBuilderLine = WordUtils.capitalizeFully(roleBuilderLine);
+            roleBuilderLine = uppercaseWithKeywordsConstraint(roleBuilderLine, keywords);
         }
         lineDividedByWhiteSpace = null;
         if (logger.isDebugEnabled()) {
@@ -403,5 +441,16 @@ public class MobygamesHelper {
         if (backIndex > 0) {
             return appended.get(backIndex);
         } else return "";
+    }
+
+    private static String uppercaseWithKeywordsConstraint(String lineString, List<String> keywords) {
+        String[] elems = lineString.split(" ");
+        for (int i = 0; i < elems.length; i++) {
+            String potentialUppercase = elems[i].toUpperCase();
+            if (keywords.contains(potentialUppercase)) {
+                elems[i] = potentialUppercase;
+            }
+        }
+        return String.join(" ", elems);
     }
 }

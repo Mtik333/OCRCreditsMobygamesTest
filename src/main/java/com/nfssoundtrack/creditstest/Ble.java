@@ -8,14 +8,10 @@ import opennlp.tools.util.InputStreamFactory;
 import opennlp.tools.util.ObjectStream;
 import opennlp.tools.util.PlainTextByLineStream;
 import opennlp.tools.util.TrainingParameters;
-import org.opencv.core.Core;
 import org.opencv.core.Mat;
-import org.opencv.core.Size;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -23,20 +19,21 @@ import java.nio.charset.StandardCharsets;
 public class Ble {
 
     public static void main(String[] args) throws TesseractException, IOException {
-        File image = new File("src/main/resources/out002.jpeg");
-        File image2 = new File("src/main/resources/out002_result.jpeg");
+        File image = new File("src/main/resources/out085.png");
+        File image2 = new File("src/main/resources/out085_result.jpeg");
         OpenCV.loadLocally();
 //        BufferedImage original = ImageIO.read(image);
 //        BufferedImage imageCopy = new BufferedImage(original.getWidth(), original.getHeight(), BufferedImage.TYPE_3BYTE_BGR);
 //        imageCopy.getGraphics().drawImage(original,0,0,null);
 //        byte[] data = ((DataBufferByte) imageCopy.getRaster().getDataBuffer()).getData();
-        Mat img = Imgcodecs.imread("src/main/resources/out002.jpeg");
+        Mat img = Imgcodecs.imread("src/main/resources/out085.png", Imgcodecs.IMREAD_GRAYSCALE);
+        Imgproc.medianBlur(img, img, 5);
         Mat gray = new Mat();
         Mat thresh1 = new Mat();
-        Imgproc.cvtColor(img,gray,Imgproc.COLOR_BGR2GRAY);
-        Imgproc.threshold(gray,thresh1, 0, 150, Imgproc.THRESH_OTSU | Imgproc.THRESH_BINARY_INV);
+        //Imgproc.cvtColor(img,gray,Imgproc.COLOR_BGR2GRAY);
+        Imgproc.adaptiveThreshold(img, thresh1, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY, 15, 2);
         //Imgproc.adaptiveThreshold(gray, thresh1, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY, 15, 40);
-        Imgcodecs.imwrite("src/main/resources/out002_result.jpeg", thresh1);
+        Imgcodecs.imwrite("src/main/resources/out085_result.jpeg", thresh1);
         Tesseract tesseract = new Tesseract();
         tesseract.setDatapath("src/main/resources/tessdata");
         tesseract.setLanguage("eng");

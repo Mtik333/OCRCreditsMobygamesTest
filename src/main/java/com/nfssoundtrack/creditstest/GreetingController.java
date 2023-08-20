@@ -65,6 +65,7 @@ public class GreetingController {
                                                                   @RequestParam(value = "nicknameDetect") boolean nicknameDetect,
                                                                   @RequestParam(value = "capitalizeDevNames") boolean capitalizeDevNames,
                                                                   @RequestParam(value = "capitalizeRoles") boolean capitalizeRoles,
+                                                                  @RequestParam(value = "uppercaseKeywords", required = false) String uppercaseKeywords,
                                                                   @RequestParam(value = "roleDevLayout") Integer roleDevLayout) {
         if (logger.isDebugEnabled()) {
             logger.debug("starting getFullCreditsText with segMode " + segMode + ", ocrEngineMode " + ocrEngineMode
@@ -132,10 +133,13 @@ public class GreetingController {
             if (groupItAll) {
                 if (roleDevLayout == 0) {
                     allResults = MobygamesHelper.reworkResultDevUnder(resultsPerFile, nicknameDetect,
-                            capitalizeDevNames, capitalizeRoles);
+                            capitalizeDevNames, capitalizeRoles, uppercaseKeywords);
                 } else if (roleDevLayout == 1) {
                     allResults = MobygamesHelper.reworkResultDevNext(resultsPerFile, twoWordNames, nicknameDetect,
-                            capitalizeDevNames, capitalizeRoles);
+                            capitalizeDevNames, capitalizeRoles, uppercaseKeywords, true);
+                } else if (roleDevLayout == 2) {
+                    allResults = MobygamesHelper.reworkResultDevNext(resultsPerFile, twoWordNames, nicknameDetect,
+                            capitalizeDevNames, capitalizeRoles, uppercaseKeywords, false);
                 }
                 if (logger.isDebugEnabled()) {
                     logger.debug("returning to page");
@@ -182,6 +186,7 @@ public class GreetingController {
                                                    @RequestParam(value = "nicknameDetect") boolean nicknameDetect,
                                                    @RequestParam(value = "capitalizeDevNames") boolean capitalizeDevNames,
                                                    @RequestParam(value = "capitalizeRoles") boolean capitalizeRoles,
+                                                   @RequestParam(value = "uppercaseKeywords", required = false) String uppercaseKeywords,
                                                    @RequestParam(value = "roleDevLayout") Integer roleDevLayout
     ) {
         if (logger.isDebugEnabled()) {
@@ -230,10 +235,13 @@ public class GreetingController {
             if (groupItAll) {
                 if (roleDevLayout == 0) {
                     allResults = MobygamesHelper.reworkResultDevUnder(resultsPerFile, nicknameDetect,
-                            capitalizeDevNames, capitalizeRoles);
+                            capitalizeDevNames, capitalizeRoles, uppercaseKeywords);
                 } else if (roleDevLayout == 1) {
                     allResults = MobygamesHelper.reworkResultDevNext(resultsPerFile, twoWordNames, nicknameDetect,
-                            capitalizeDevNames, capitalizeRoles);
+                            capitalizeDevNames, capitalizeRoles, uppercaseKeywords, true);
+                } else if (roleDevLayout == 2) {
+                    allResults = MobygamesHelper.reworkResultDevNext(resultsPerFile, twoWordNames, nicknameDetect,
+                            capitalizeDevNames, capitalizeRoles, uppercaseKeywords, false);
                 } else {
                     allResults = new HashMap<>();
                 }
