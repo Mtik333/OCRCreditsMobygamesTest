@@ -85,37 +85,56 @@ public class NameModelHelper {
         return parsedText.toString();
     }
 
-    public static void invertImage(Path imagePath, String originalFileName, boolean grayscale) throws IOException {
-
+    public static void resizeAndInvertImage(Path imagePath, String originalFileName, boolean grayscale,
+                                            boolean isBlack, int imageResolutionMultiplier)
+            throws IOException {
         if (logger.isDebugEnabled()) {
             logger.debug("starting invertImage with " + imagePath + ", grayscale? " + grayscale);
         }
         BufferedImage inputFile = ImageIO.read(imagePath.toFile());
-        for (int x = 0; x < inputFile.getWidth(); x++) {
-            for (int y = 0; y < inputFile.getHeight(); y++) {
-                int rgba = inputFile.getRGB(x, y);
-                Color col = new Color(rgba, true);
-                //invert image
-                int red = 255 - col.getRed();
-                int green = 255 - col.getGreen();
-                int blue = 255 - col.getBlue();
-                if (grayscale) {
-                    red = (int) (red * 0.299);
-                    green = (int) (green * 0.587);
-                    blue = (int) (blue * 0.114);
-                    col = new Color(red + green + blue, red + green + blue, red + green + blue);
-                } else {
-                    col = new Color(red, green, blue);
-                }
-                inputFile.setRGB(x, y, col.getRGB());
+        if (imageResolutionMultiplier != 1) {
+            int newWidth = (inputFile.getWidth() * imageResolutionMultiplier);
+            int newHeight = (inputFile.getHeight() * imageResolutionMultiplier);
+            Image resizedImage = inputFile.getScaledInstance(newWidth, newHeight, Image.SCALE_SMOOTH);
+            String resizedPath = imagePath.toFile().getPath();
+            String actualFileName = imagePath.getFileName().toString();
+            resizedPath = resizedPath.replace(originalFileName, "resized_" + originalFileName);
+            File resizedPathAsFile = new File(resizedPath);
+            if (!resizedPathAsFile.exists()) {
+                resizedPathAsFile.createNewFile();
             }
+            boolean write = ImageIO.write(convertToBufferedImage(resizedImage), "png", resizedPathAsFile);
+            inputFile = ImageIO.read(resizedPathAsFile);
         }
-        String dedicatedPath = imagePath.toFile().getPath();
-        dedicatedPath = dedicatedPath.replace(originalFileName, "invert_" + originalFileName);
-        File outputFile = new File(dedicatedPath);
-        ImageIO.write(inputFile, "png", outputFile);
+        int actualWidth = inputFile.getWidth();
+        int actualHeight = inputFile.getHeight();
+        if (isBlack) {
+            for (int x = 0; x < actualWidth; x++) {
+                for (int y = 0; y < actualHeight; y++) {
+                    int rgba = inputFile.getRGB(x, y);
+                    Color col = new Color(rgba, true);
+                    //invert image
+                    int red = 255 - col.getRed();
+                    int green = 255 - col.getGreen();
+                    int blue = 255 - col.getBlue();
+                    if (grayscale) {
+                        red = (int) (red * 0.299);
+                        green = (int) (green * 0.587);
+                        blue = (int) (blue * 0.114);
+                        col = new Color(red + green + blue, red + green + blue, red + green + blue);
+                    } else {
+                        col = new Color(red, green, blue);
+                    }
+                    inputFile.setRGB(x, y, col.getRGB());
+                }
+            }
+            String dedicatedPath = imagePath.toFile().getPath();
+            dedicatedPath = dedicatedPath.replace(originalFileName, "invert_" + originalFileName);
+            File outputFile = new File(dedicatedPath);
+            ImageIO.write(inputFile, "png", outputFile);
+            dedicatedPath = null;
+        }
         inputFile = null;
-        dedicatedPath = null;
     }
 
     public static void setTesseractDatapath(Tesseract tesseractInstance) throws URISyntaxException {
@@ -150,4 +169,17 @@ public class NameModelHelper {
         }
     }
 
+    public static BufferedImage convertToBufferedImage(Image img) {
+        if (img instanceof BufferedImage) {
+            return (BufferedImage) img;
+        }
+        // Create a buffered image with transparency
+        BufferedImage bi = new BufferedImage(
+                img.getWidth(null), img.getHeight(null),
+                BufferedImage.TYPE_INT_ARGB);
+        Graphics2D graphics2D = bi.createGraphics();
+        graphics2D.drawImage(img, 0, 0, null);
+        graphics2D.dispose();
+        return bi;
+    }
 }

@@ -66,6 +66,7 @@ public class GreetingController {
                                                                   @RequestParam(value = "capitalizeDevNames") boolean capitalizeDevNames,
                                                                   @RequestParam(value = "capitalizeRoles") boolean capitalizeRoles,
                                                                   @RequestParam(value = "uppercaseKeywords", required = false) String uppercaseKeywords,
+                                                                  @RequestParam(value = "defineLanguage", required = false) String defineLanguage,
                                                                   @RequestParam(value = "roleDevLayout") Integer roleDevLayout) {
         if (logger.isDebugEnabled()) {
             logger.debug("starting getFullCreditsText with segMode " + segMode + ", ocrEngineMode " + ocrEngineMode
@@ -96,7 +97,7 @@ public class GreetingController {
             }
             Tesseract tesseractInstance = new Tesseract();
             NameModelHelper.setTesseractDatapath(tesseractInstance);
-            tesseractInstance.setLanguage("eng");
+            tesseractInstance.setLanguage(defineLanguage);
             if (segMode != null) {
                 tesseractInstance.setPageSegMode(segMode);
             }
@@ -124,7 +125,8 @@ public class GreetingController {
                     logger.debug("allFiles size " + allFiles.size());
                 }
                 resultsHolder.setResultsPerFile(resultsPerFile);
-                resultsHolder.performReading(tesseractInstance, segMode, ocrEngineMode, rectangle, replaceComma);
+                resultsHolder.performReading(tesseractInstance, segMode, ocrEngineMode,
+                        rectangle, replaceComma, defineLanguage);
                 allFiles = null;
             }
             rectangle = null;
@@ -187,6 +189,7 @@ public class GreetingController {
                                                    @RequestParam(value = "capitalizeDevNames") boolean capitalizeDevNames,
                                                    @RequestParam(value = "capitalizeRoles") boolean capitalizeRoles,
                                                    @RequestParam(value = "uppercaseKeywords", required = false) String uppercaseKeywords,
+                                                   @RequestParam(value = "defineLanguage", required = false) String defineLanguage,
                                                    @RequestParam(value = "roleDevLayout") Integer roleDevLayout
     ) {
         if (logger.isDebugEnabled()) {
@@ -218,7 +221,7 @@ public class GreetingController {
                 logger.debug("image fetched");
             }
             String result = getTextFromImageNoRest(null, segMode, ocrEngineMode,
-                    rectangle, img);
+                    rectangle, img, defineLanguage);
             img = null;
             imageBytes = null;
             if (logger.isDebugEnabled()) {
@@ -271,6 +274,7 @@ public class GreetingController {
     public ResponseEntity<String> uploadImageToBackend(HttpSession session,
                                                        @RequestParam("files") MultipartFile[] files,
                                                        @RequestParam(value = "black") boolean isBlack,
+                                                       @RequestParam(value = "multiplier") String sizeMultiplier,
                                                        @RequestParam(value = "highContrast") boolean grayScale
     ) {
         if (logger.isDebugEnabled()) {
@@ -305,9 +309,12 @@ public class GreetingController {
                         }
                         Files.copy(file.getInputStream(), targetPath);
                         finalUploadHolder.setUploadedFiles(finalUploadHolder.getUploadedFiles() + 1);
-                        if (isBlack) {
-                            NameModelHelper.invertImage(targetPath, file.getOriginalFilename(), grayScale);
-                        }
+                        int imageResolutionMultiplier = Integer.parseInt(sizeMultiplier);
+                        NameModelHelper.resizeAndInvertImage(targetPath, file.getOriginalFilename(),
+                                grayScale, isBlack, imageResolutionMultiplier);
+//                        if (isBlack) {
+//                            NameModelHelper.invertImage(targetPath, file.getOriginalFilename(), grayScale);
+//                        }
                     }
                 } catch (IOException e) {
                     logger.error(e.getMessage(), e);
@@ -364,8 +371,17 @@ public class GreetingController {
     @ResponseBody
     public ResponseEntity<AbstractMap.Entry<String, String>> getUploadStatus(HttpSession session) {
         if (sessionHolder.getSessionToUploads() != null) {
-            return ResponseEntity.status(HttpStatus.OK).body(
-                    sessionHolder.getSessionToUploads().get(session.getId()).giveFeedback());
+            if (logger.isDebugEnabled()) {
+                logger.debug("session id " + session.getId());
+            }
+            UploadHolder idHolder = sessionHolder.getSessionToUploads().get(session.getId());
+            if (idHolder != null) {
+                return ResponseEntity.status(HttpStatus.OK).body(idHolder.giveFeedback());
+            } else {
+                return ResponseEntity.status(HttpStatus.OK).body(
+                        new AbstractMap.SimpleEntry<>("ocr", "Undetermined state of uploading, " +
+                                "please wait, maybe it is temporary"));
+            }
         } else {
             return ResponseEntity.status(HttpStatus.OK).body(
                     new AbstractMap.SimpleEntry<>("ocr", "Starting the process..."));
@@ -373,8 +389,9 @@ public class GreetingController {
     }
 
     public String getTextFromImageNoRest(Tesseract tesseractInstance, Integer segMode,
-                                         Integer ocrEngineMode, Rectangle rectangle, BufferedImage img
-    ) throws URISyntaxException, TesseractException {
+                                         Integer ocrEngineMode, Rectangle rectangle, BufferedImage img,
+                                         String language)
+            throws URISyntaxException, TesseractException {
         if (logger.isDebugEnabled()) {
             logger.debug("starting cleanSessionImagesDirectory with " + tesseractInstance
                     + ", segMode" + segMode + ", ocrEngineMode " + ocrEngineMode
@@ -383,7 +400,7 @@ public class GreetingController {
         if (tesseractInstance == null) {
             tesseractInstance = new Tesseract();
             NameModelHelper.setTesseractDatapath(tesseractInstance);
-            tesseractInstance.setLanguage("eng");
+            tesseractInstance.setLanguage(language);
             if (segMode != null) {
                 tesseractInstance.setPageSegMode(segMode);
             }

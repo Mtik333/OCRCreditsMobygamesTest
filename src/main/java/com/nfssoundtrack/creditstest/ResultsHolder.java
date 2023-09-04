@@ -42,7 +42,8 @@ public class ResultsHolder {
 
     public void performReading(Tesseract tesseractInstance, Integer segMode,
                                Integer ocrEngineMode, Rectangle rectangle,
-                               boolean replaceComma) throws IOException, TesseractException, URISyntaxException {
+                               boolean replaceComma, String language)
+            throws IOException, TesseractException, URISyntaxException {
         for (Path path : allFiles) {
             byte[] imageBytes = Files.readAllBytes(path);
             BufferedImage img = ImageIO.read(new ByteArrayInputStream(imageBytes));
@@ -50,7 +51,7 @@ public class ResultsHolder {
                 logger.debug("image fetched");
             }
             String textResult = getTextFromImageNoRest(tesseractInstance, segMode, ocrEngineMode,
-                    rectangle, img);
+                    rectangle, img, language);
             img = null;
             imageBytes = null;
             if (logger.isDebugEnabled()) {
@@ -68,8 +69,9 @@ public class ResultsHolder {
     }
 
     public String getTextFromImageNoRest(Tesseract tesseractInstance, Integer segMode,
-                                         Integer ocrEngineMode, Rectangle rectangle, BufferedImage img
-    ) throws URISyntaxException, TesseractException {
+                                         Integer ocrEngineMode, Rectangle rectangle, BufferedImage img,
+                                         String language)
+            throws URISyntaxException, TesseractException {
         if (logger.isDebugEnabled()) {
             logger.debug("starting cleanSessionImagesDirectory with " + tesseractInstance
                     + ", segMode" + segMode + ", ocrEngineMode " + ocrEngineMode
@@ -78,7 +80,7 @@ public class ResultsHolder {
         if (tesseractInstance == null) {
             tesseractInstance = new Tesseract();
             NameModelHelper.setTesseractDatapath(tesseractInstance);
-            tesseractInstance.setLanguage("eng");
+            tesseractInstance.setLanguage(language);
             if (segMode != null) {
                 tesseractInstance.setPageSegMode(segMode);
             }
