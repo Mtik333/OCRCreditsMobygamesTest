@@ -379,8 +379,8 @@ public class GreetingController {
                 return ResponseEntity.status(HttpStatus.OK).body(idHolder.giveFeedback());
             } else {
                 return ResponseEntity.status(HttpStatus.OK).body(
-                        new AbstractMap.SimpleEntry<>("ocr", "Undetermined state of uploading, " +
-                                "please wait, maybe it is temporary"));
+                        new AbstractMap.SimpleEntry<>("ocr", "Weird, upload is going on but this message " +
+                                "should not appear, please wait"));
             }
         } else {
             return ResponseEntity.status(HttpStatus.OK).body(

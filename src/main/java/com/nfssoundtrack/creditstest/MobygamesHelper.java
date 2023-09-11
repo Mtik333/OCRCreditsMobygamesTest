@@ -173,6 +173,7 @@ public class MobygamesHelper {
             List<String> producerStringList = new ArrayList<>();
 //            StringBuilder producedString = new StringBuilder();
             String[] splitTextByNewline = entry.getValue().split("\n");
+            boolean emptyLineExists = isEmptyLineInOCR(splitTextByNewline);
             for (int i = 0; i < splitTextByNewline.length; i++) {
                 String lineString = splitTextByNewline[i];
                 String nextLine = null;
@@ -197,7 +198,7 @@ public class MobygamesHelper {
                                         roleStarted, capitalizeDevNames, capitalizeRoles,
                                         getPreviousFromList(producerStringList, 1),
                                         getPreviousFromList(producerStringList, 2),
-                                        keywords, rolesOnLeft);
+                                        keywords, rolesOnLeft, emptyLineExists);
                         if (analyzedLine.getValue() != null) {
 //                            producedString.append(analyzedLine.getKey()).append("\n").append(analyzedLine.getValue());
                             producerStringList.add(analyzedLine.getKey() + ("\n") + analyzedLine.getValue());
@@ -225,7 +226,7 @@ public class MobygamesHelper {
                                     roleToDevName(nextLine, nameFinderME, twoWordNames, roleStarted, capitalizeDevNames, capitalizeRoles,
                                             getPreviousFromList(producerStringList, 1),
                                             getPreviousFromList(producerStringList, 2),
-                                            keywords, rolesOnLeft);
+                                            keywords, rolesOnLeft, emptyLineExists);
                             if (analyzedLine.getValue() != null) {
                                 producerStringList.add("");
                             } else {
@@ -247,7 +248,7 @@ public class MobygamesHelper {
                                     roleStarted, capitalizeDevNames, capitalizeRoles,
                                     getPreviousFromList(producerStringList, 1),
                                     getPreviousFromList(producerStringList, 2),
-                                    keywords, rolesOnLeft);
+                                    keywords, rolesOnLeft, emptyLineExists);
                     if (analyzedLine.getValue() != null) {
                         if (analyzedLine.getKey().isEmpty()) {
 //                            producedString.append("\n").append(lineString);
@@ -325,12 +326,14 @@ public class MobygamesHelper {
                                                                          String previousAppend,
                                                                          String appendBeforePreviousAppend,
                                                                          List<String> keywords,
-                                                                         boolean rolesOnLeft) {
+                                                                         boolean rolesOnLeft,
+                                                                         boolean emptyLineExists) {
         //assuming line is: 3D Artist John Smith - we want to get 2 last words and check if this is a name
         if (logger.isDebugEnabled()) {
             logger.debug("starting roleToDevName with " + lineString + ", twoWordNames " + twoWordNames);
         }
-        if (roleStarted && !previousAppend.isBlank() && !appendBeforePreviousAppend.isBlank()) {
+        if (roleStarted && !previousAppend.isBlank() && !appendBeforePreviousAppend.isBlank()
+            && emptyLineExists) {
             return new AbstractMap.SimpleEntry<>("", lineString);
         }
         StringBuilder roleBulder = new StringBuilder();
@@ -452,5 +455,14 @@ public class MobygamesHelper {
             }
         }
         return String.join(" ", elems);
+    }
+
+    private static boolean isEmptyLineInOCR(String[] splitTextByNewline){
+        for (String line : splitTextByNewline){
+            if (line.trim().isEmpty()){
+                return true;
+            }
+        }
+        return false;
     }
 }
