@@ -1,6 +1,6 @@
 package com.nfssoundtrack.creditstest;
 
-import com.lowagie.text.html.HtmlEncoder;
+import com.itextpdf.text.html.HtmlEncoder;
 import jakarta.servlet.http.HttpSession;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;

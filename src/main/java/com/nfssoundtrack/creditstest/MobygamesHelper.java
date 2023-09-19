@@ -1,6 +1,7 @@
 package com.nfssoundtrack.creditstest;
 
-import com.lowagie.text.html.HtmlEncoder;
+
+import com.itextpdf.text.html.HtmlEncoder;
 import opennlp.tools.namefind.NameFinderME;
 import opennlp.tools.namefind.TokenNameFinderModel;
 import opennlp.tools.util.Span;
