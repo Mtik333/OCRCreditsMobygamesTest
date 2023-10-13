@@ -610,47 +610,12 @@
             var widget = image.widget;
             $(".imageToCrop").each(function () {
                 setTimeout(goThroughWidgets, 200, $(this)[0], xCoord, yCoord, widthCoord, heightCoord);
-                // var potentialWidget = $(this)[0].widget;
-                // if (potentialWidget == undefined) {
-                //     const rect = Jcrop.Rect.fromPoints([xCoord, yCoord], [xCoord + widthCoord, yCoord + heightCoord]);
-                //     const jcrop = $(this)[0].stage;
-                //     jcrop.newWidget(rect, {});
-                // } else {
-                //     var img = $(this)[0];
-                //     img.stage.destroy();
-                //     Jcrop.load(img).then(img => {
-                //         var stage = Jcrop.attach(img, {
-                //             onRelease: finalCoordinates
-                //         });
-                //         img.stage = stage;
-                //         stage.listen('crop.change', (widget, e) => {
-                //             finalCoordinates(widget, e);
-                //         });
-                //         const rect = Jcrop.Rect.fromPoints([xCoord, yCoord], [xCoord + widthCoord, yCoord + heightCoord]);
-                //         const jcrop = img.stage;
-                //         var newWidget = jcrop.newWidget(rect, {});
-                //         $(this)[0].widget = newWidget;
-                //     });
-                // }
-                // $(this).prop('tempPropX', xCoord);
-                // $(this).prop('tempPropY', yCoord);
-                // $(this).prop('tempPropW', widthCoord);
-                // $(this).prop('tempPropH', heightCoord);
             });
         }
 
         function goThroughWidgets(inputImage, xCoord, yCoord, widthCoord, heightCoord) {
             var potentialWidget = inputImage.widget;
-            // if (potentialWidget == undefined) {
-            //     if (inputImage.stage != undefined){
-            //         inputImage.stage.destroy();
-            //     }
-            //     const rect = Jcrop.Rect.fromPoints([xCoord, yCoord], [xCoord + widthCoord, yCoord + heightCoord]);
-            //     const jcrop = inputImage.stage;
-            //     jcrop.newWidget(rect, {});
-            // } else {
             var img = inputImage;
-            // reinitStage(img);
             img.stage.destroy();
             // img.removeAttribute('style');
             Jcrop.load(img).then(img => {
@@ -666,34 +631,13 @@
                 console.log("SADKSAJDKLSADA");
                 var newWidget = jcrop.newWidget(rect, {});
                 $(this)[0].widget = newWidget;
+                img.setAttribute('tempPropX', xCoord);
+                img.setAttribute('tempPropY', yCoord);
+                img.setAttribute('tempPropW', widthCoord);
+                img.setAttribute('tempPropH', heightCoord);
             });
             // }
-            $(this).prop('tempPropX', xCoord);
-            $(this).prop('tempPropY', yCoord);
-            $(this).prop('tempPropW', widthCoord);
-            $(this).prop('tempPropH', heightCoord);
         }
-
-        // async function destroyStage(img){
-        //     img.stage.destroy();
-        // }
-
-        // async function reinitStage(img){
-        //     await destroyStage();
-        //     Jcrop.load(img).then(img => {
-        //             var stage = Jcrop.attach(img, {
-        //                 onRelease: finalCoordinates
-        //             });
-        //             img.stage = stage;
-        //             stage.listen('crop.change', (widget, e) => {
-        //                 finalCoordinates(widget, e);
-        //             });
-        //             const rect = Jcrop.Rect.fromPoints([xCoord, yCoord], [xCoord + widthCoord, yCoord + heightCoord]);
-        //             const jcrop = img.stage;
-        //             var newWidget = jcrop.newWidget(rect, {});
-        //             $(this)[0].widget = newWidget;
-        //         });
-        // }
 
         function enterToBr(e) {
             // trap the return key being pressed
