@@ -36,6 +36,33 @@
     margin-right: 5px;
     padding-right: 5px;
 }
+            .tooltip {
+  position: relative;
+  display: inline-block;
+  border-bottom: 1px dotted black; /* If you want dots under the hoverable text */
+}
+.tooltipOption .tooltipText {
+  visibility: hidden;
+  width: 120px;
+  background-color: black;
+  color: #fff;
+  text-align: center;
+  padding: 5px 0;
+  border-radius: 6px;
+
+  /* Position the tooltip text - see examples below! */
+  position: absolute;
+  z-index: 1;
+}
+.tooltipOption0:hover .tooltipText0 {
+  visibility: visible;
+}
+    .tooltipOption1:hover .tooltipText1 {
+  visibility: visible;
+}
+    .tooltipOption2:hover .tooltipText2 {
+  visibility: visible;
+}
 </style>
 <body>
     <!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js" integrity="sha384-HwwvtgBNo3bZJJLYd8oVXjrBZt8cqVSpeBNS5n7C8IVInixGAoxmnlMuBnhbgrkm" crossorigin="anonymous"></script> -->
@@ -131,9 +158,10 @@
         </select>
         <br>
         <label for="roleDevLayout">Choose credits layout</label><select id="roleDevLayout" onchange="adjustOcrMode()">
-            <option value="0">0 - Dev name(s) below role title</option>
-            <option value="1">1 - Dev names next to (right) role title</option>
-            <option value="2">2 - Dev names next to (left) role title</option>
+            <option value="0" title="Example:&#013;&#013;Artist&#013;Justin Ma">0 - Dev name(s) below role title</option>
+            <option value="1" title="Example:&#013;Artist&#9;&#9;&#9;Justin Ma">1 - Dev names next to (right) role title</option>
+            <option value="2" title="Example:&#013;Justin Ma&#9;-&#9;Artist">2 - Dev names next to (left) role title</option>
+        <!--<option value="3" title="Example:&#013;Justin Ma&#9;-&#9;FIFA Core&#9;-&#9;Producer">3 - Dev name next to group next to role</option>-->
         </select>
         <br>
         <button id="scanAllId" disabled>OCR all images</button>
@@ -510,7 +538,7 @@
                     $("#previewResolution").prop('disabled', false);
                     var myKeys = Object.keys(data);
                     Array.prototype.forEach.call(myKeys, function (myKey) {
-                        var myImg = $("#" + myKey)[0];
+                        var myImg = $("[id=\'"+myKey+"\']")[0];
                         var myText = data[myKey];
                         console.log("ok");
                         var textTd = myImg.parentElement.parentElement.nextSibling;
