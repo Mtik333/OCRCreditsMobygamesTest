@@ -129,7 +129,12 @@
         <input type="checkbox" id="capitalizeRoles" value="true" checked><label for="capitalizeRoles">Try to correct
             UPPERCASE ROLES</label>
         <br>
-        <input type="checkbox" id="uppercaseKeywordsCheckbox" value="true" checked><label for="capitalizeRoles">Keep uppercase for following keywords:</label>
+        <label for="lineSeparator">If role and dev are in same line, choose separator</label><select id="lineSeparator" onchange="rememberResize()">
+            <option value=" " selected="selected">White space</option>
+            <option value="-">-</option>
+        </select>
+        <br>
+        <input type="checkbox" id="uppercaseKeywordsCheckbox" value="true" checked><label for="uppercaseKeywordsCheckbox">Keep uppercase for following keywords:</label>
         <br>
         <input type="text" id="uppercaseKeywordsText" value="HQ, CEO, NCSA, APAC, 2D, 3D, LQA, QA, R&D, UOR, HR, VFX, VP, SVP, COO, CTO, IT, PR, UI, UX, AI"
         style="width:100%">
@@ -161,7 +166,7 @@
             <option value="0" title="Example:&#013;&#013;Artist&#013;Justin Ma">0 - Dev name(s) below role title</option>
             <option value="1" title="Example:&#013;Artist&#9;&#9;&#9;Justin Ma">1 - Dev names next to (right) role title</option>
             <option value="2" title="Example:&#013;Justin Ma&#9;-&#9;Artist">2 - Dev names next to (left) role title</option>
-        <!--<option value="3" title="Example:&#013;Justin Ma&#9;-&#9;FIFA Core&#9;-&#9;Producer">3 - Dev name next to group next to role</option>-->
+            <option value="3" title="Example:&#013;Justin Ma&#9;-&#9;FIFA Core&#9;-&#9;Producer">3 - Dev name next to group next to role</option>
         </select>
         <br>
         <button id="scanAllId" disabled>OCR all images</button>
@@ -357,6 +362,7 @@
             }
             formData.append('pageSegMode', $("#pageSegModeGlobal")[0].value);
             formData.append('ocrEngineMode', $("#ocrEngineModeGlobal")[0].value);
+            formData.append('lineSeparator', $("#lineSeparator")[0].value);
             formData.append('roleDevLayout', $("#roleDevLayout")[0].value);
             formData.append('defineLanguage', $("#defineLanguage")[0].value);
             if ($("#replaceComma")[0].checked) {
@@ -482,6 +488,7 @@
             }
             formData.append('pageSegMode', $("#pageSegModeGlobal")[0].value);
             formData.append('ocrEngineMode', $("#ocrEngineModeGlobal")[0].value);
+            formData.append('lineSeparator', $("#lineSeparator")[0].value);
             formData.append('roleDevLayout', $("#roleDevLayout")[0].value);
             formData.append('defineLanguage', $("#defineLanguage")[0].value);
             if ($("#replaceComma")[0].checked) {
@@ -680,7 +687,7 @@
         function adjustOcrMode(e) {
             //not sure about this yet
             var roleLayoutValue = $("#roleDevLayout")[0].value;
-            if (roleLayoutValue == 1 || roleLayoutValue == 2) {
+            if (roleLayoutValue == 1 || roleLayoutValue == 2 || roleLayoutValue == 3) {
                 $("#pageSegModeGlobal")[0].value = 4;
             }
         }

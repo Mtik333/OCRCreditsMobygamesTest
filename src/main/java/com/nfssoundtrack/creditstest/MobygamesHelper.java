@@ -141,7 +141,8 @@ public class MobygamesHelper {
                                                           boolean capitalizeDevNames,
                                                           boolean capitalizeRoles,
                                                           String uppercaseKeywords,
-                                                          boolean rolesOnLeft) throws IOException {
+                                                          boolean rolesOnLeft,
+                                                          String lineSeparator) throws IOException {
         if (logger.isDebugEnabled()) {
             logger.debug("starting reworkResultDevNext with " + filesWithText
                     + ", nicknameDetect " + nicknameDetect + ", twoWordNames " + twoWordNames);
@@ -199,7 +200,7 @@ public class MobygamesHelper {
                                         roleStarted, capitalizeDevNames, capitalizeRoles,
                                         getPreviousFromList(producerStringList, 1),
                                         getPreviousFromList(producerStringList, 2),
-                                        keywords, rolesOnLeft, emptyLineExists);
+                                        keywords, rolesOnLeft, emptyLineExists, lineSeparator);
                         if (analyzedLine.getValue() != null) {
 //                            producedString.append(analyzedLine.getKey()).append("\n").append(analyzedLine.getValue());
                             producerStringList.add(analyzedLine.getKey() + ("\n") + analyzedLine.getValue());
@@ -227,7 +228,7 @@ public class MobygamesHelper {
                                     roleToDevName(nextLine, nameFinderME, twoWordNames, roleStarted, capitalizeDevNames, capitalizeRoles,
                                             getPreviousFromList(producerStringList, 1),
                                             getPreviousFromList(producerStringList, 2),
-                                            keywords, rolesOnLeft, emptyLineExists);
+                                            keywords, rolesOnLeft, emptyLineExists, lineSeparator);
                             if (analyzedLine.getValue() != null) {
                                 producerStringList.add("");
                             } else {
@@ -249,7 +250,7 @@ public class MobygamesHelper {
                                     roleStarted, capitalizeDevNames, capitalizeRoles,
                                     getPreviousFromList(producerStringList, 1),
                                     getPreviousFromList(producerStringList, 2),
-                                    keywords, rolesOnLeft, emptyLineExists);
+                                    keywords, rolesOnLeft, emptyLineExists, lineSeparator);
                     if (analyzedLine.getValue() != null) {
                         if (analyzedLine.getKey().isEmpty()) {
 //                            producedString.append("\n").append(lineString);
@@ -284,6 +285,48 @@ public class MobygamesHelper {
             reworkedMap.put(fileIdName, HtmlEncoder.encode(resultOfTool2));
             resultOfTool2 = null;
         }
+        return reworkedMap;
+    }
+
+
+    public static Map<String, String> reworkResultDevNextFulLCredits(Map<Path, String> filesWithText,
+                                                                     boolean twoWordNames,
+                                                                     boolean nicknameDetect,
+                                                                     boolean capitalizeDevNames,
+                                                                     boolean capitalizeRoles,
+                                                                     String uppercaseKeywords,
+                                                                     boolean rolesOnLeft,
+                                                                     String lineSeparator) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("starting reworkResultDevNextFulLCredits with " + filesWithText
+                    + ", nicknameDetect " + nicknameDetect + ", twoWordNames " + twoWordNames);
+        }
+        List<String> keywords = new ArrayList<>();
+        if (uppercaseKeywords != null) {
+            String[] preKeywords = uppercaseKeywords.split(",");
+            for (String keyword : preKeywords) {
+                keywords.add(keyword.trim());
+            }
+        }
+        Map<String, Map<String, List<String>>> groupsToRolesWithDevs = new HashMap<>();
+        for (Map.Entry<Path, String> entry : filesWithText.entrySet()) {
+            String[] splitTextByNewline = entry.getValue().split("\n");
+            for (int i = 0; i < splitTextByNewline.length; i++) {
+                String lineString = splitTextByNewline[i];
+                if (logger.isDebugEnabled()) {
+                    logger.debug("lineString " + lineString);
+                }
+                roleToDevNameToGroup(lineString, capitalizeDevNames, capitalizeRoles, keywords, null, lineSeparator, groupsToRolesWithDevs);
+            }
+        }
+        //we are going to return just one file
+        Map<String, String> reworkedMap = new HashMap<>();
+        Map.Entry<Path, String> firstEntry = filesWithText.entrySet().stream().findFirst().get();
+        String fileIdName = firstEntry.getKey().getFileName().toString();
+        fileIdName = fileIdName.replace("invert_", "");
+        fileIdName = fileIdName.substring(0, fileIdName.indexOf("."));
+        String resultOfTool2 = fullCreditsFormat(groupsToRolesWithDevs);
+        reworkedMap.put(fileIdName, HtmlEncoder.encode(resultOfTool2));
         return reworkedMap;
     }
 
@@ -328,45 +371,62 @@ public class MobygamesHelper {
                                                                          String appendBeforePreviousAppend,
                                                                          List<String> keywords,
                                                                          boolean rolesOnLeft,
-                                                                         boolean emptyLineExists) {
+                                                                         boolean emptyLineExists,
+                                                                         String lineSeparator) {
         //assuming line is: 3D Artist John Smith - we want to get 2 last words and check if this is a name
         if (logger.isDebugEnabled()) {
             logger.debug("starting roleToDevName with " + lineString + ", twoWordNames " + twoWordNames);
         }
         if (roleStarted && !previousAppend.isBlank() && !appendBeforePreviousAppend.isBlank()
-            && emptyLineExists) {
+                && emptyLineExists) {
             return new AbstractMap.SimpleEntry<>("", lineString);
         }
         StringBuilder roleBulder = new StringBuilder();
         StringBuilder nameBuilder = new StringBuilder();
-        String[] lineDividedByWhiteSpace = lineString.split(" ");
-        if (rolesOnLeft) {
-            int divisionIndex = lineDividedByWhiteSpace.length - 2;
-            if (logger.isDebugEnabled()) {
-                logger.debug("divisionIndex " + divisionIndex);
+        String roleBuilderLine;
+        String nameBuilderLine;
+        if (!lineSeparator.isEmpty()) {
+            String[] lineDividedByChar = lineString.split(lineSeparator);
+            if (lineDividedByChar.length < 2) {
+                return new AbstractMap.SimpleEntry<>(" ", " ");
             }
-            for (int i = 0; i < lineDividedByWhiteSpace.length; i++) {
-                if (i < divisionIndex) {
-                    roleBulder.append(lineDividedByWhiteSpace[i]).append(" ");
-                } else {
-                    nameBuilder.append(lineDividedByWhiteSpace[i]).append(" ");
-                }
+            if (rolesOnLeft) {
+                roleBuilderLine = lineDividedByChar[0].trim();
+                nameBuilderLine = lineDividedByChar[1].trim();
+            } else {
+                roleBuilderLine = lineDividedByChar[1].trim();
+                nameBuilderLine = lineDividedByChar[0].trim();
             }
         } else {
-            int divisionIndex = 1;
-            if (logger.isDebugEnabled()) {
-                logger.debug("divisionIndex " + divisionIndex);
-            }
-            for (int i = 0; i < lineDividedByWhiteSpace.length; i++) {
-                if (i > divisionIndex) {
-                    roleBulder.append(lineDividedByWhiteSpace[i]).append(" ");
-                } else {
-                    nameBuilder.append(lineDividedByWhiteSpace[i]).append(" ");
+            String[] lineDividedByWhiteSpace = lineString.split(" ");
+            if (rolesOnLeft) {
+                int divisionIndex = lineDividedByWhiteSpace.length - 2;
+                if (logger.isDebugEnabled()) {
+                    logger.debug("divisionIndex " + divisionIndex);
+                }
+                for (int i = 0; i < lineDividedByWhiteSpace.length; i++) {
+                    if (i < divisionIndex) {
+                        roleBulder.append(lineDividedByWhiteSpace[i]).append(" ");
+                    } else {
+                        nameBuilder.append(lineDividedByWhiteSpace[i]).append(" ");
+                    }
+                }
+            } else {
+                int divisionIndex = 1;
+                if (logger.isDebugEnabled()) {
+                    logger.debug("divisionIndex " + divisionIndex);
+                }
+                for (int i = 0; i < lineDividedByWhiteSpace.length; i++) {
+                    if (i > divisionIndex) {
+                        roleBulder.append(lineDividedByWhiteSpace[i]).append(" ");
+                    } else {
+                        nameBuilder.append(lineDividedByWhiteSpace[i]).append(" ");
+                    }
                 }
             }
+            roleBuilderLine = roleBulder.toString().trim();
+            nameBuilderLine = nameBuilder.toString().trim();
         }
-        String roleBuilderLine = roleBulder.toString().trim();
-        String nameBuilderLine = nameBuilder.toString().trim();
         if (capitalizeDevNames) {
             nameBuilderLine = WordUtils.capitalizeFully(nameBuilderLine);
         }
@@ -374,7 +434,6 @@ public class MobygamesHelper {
             roleBuilderLine = WordUtils.capitalizeFully(roleBuilderLine);
             roleBuilderLine = uppercaseWithKeywordsConstraint(roleBuilderLine, keywords);
         }
-        lineDividedByWhiteSpace = null;
         if (logger.isDebugEnabled()) {
             logger.debug("roleBuilderLine " + roleBuilderLine + ", nameBuilderLine " + nameBuilderLine);
         }
@@ -398,6 +457,64 @@ public class MobygamesHelper {
                 roleBulder = null;
                 nameBuilder = null;
                 return new AbstractMap.SimpleEntry<>(roleBuilderLine, nameBuilderLine);
+            }
+        }
+    }
+
+    private static void roleToDevNameToGroup(String lineString,
+                                             boolean capitalizeDevNames,
+                                             boolean capitalizeRoles,
+                                             List<String> keywords,
+                                             String formatOfLine,
+                                             String lineSeparator,
+                                             Map<String, Map<String, List<String>>> groupsToRolesWithDevs
+    ) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("starting roleToDevNameToGroup with lineString: " + lineString
+                    + ", capitalizeDevNames " + capitalizeDevNames + ", capitalizeRoles " + capitalizeRoles
+                    + ", formatOfLine " + formatOfLine + ", lineSeparator: " + lineSeparator);
+        }
+        if (!lineSeparator.isEmpty()) {
+            String[] lineDividedByChar = lineString.split(" " + lineSeparator);
+            //TODO make it flexible
+            if (lineDividedByChar.length >= 3) {
+                String dev = lineDividedByChar[0].trim();
+                String role = lineDividedByChar[2].trim();
+                String group = lineDividedByChar[1].trim();
+                if (capitalizeDevNames) {
+                    dev = WordUtils.capitalizeFully(dev);
+                }
+                if (capitalizeRoles) {
+                    role = WordUtils.capitalizeFully(role);
+                    role = uppercaseWithKeywordsConstraint(role, keywords);
+                }
+                logger.debug("dev after capitalizing " + dev);
+                boolean groupExists = groupsToRolesWithDevs.containsKey(group);
+                if (groupExists) {
+                    logger.debug("groupExists " + group);
+                    Map<String, List<String>> roleToDevs = groupsToRolesWithDevs.get(group);
+                    boolean roleExists = roleToDevs.containsKey(role);
+                    if (roleExists) {
+                        logger.debug("roleExists " + role);
+                        List<String> devs = roleToDevs.get(role);
+                        if (!devs.contains(dev)) {
+                            devs.add(dev);
+                        }
+                        roleToDevs.put(role, devs);
+                    } else {
+                        logger.debug("creating role: " + role);
+                        List<String> devs = new ArrayList<>();
+                        devs.add(dev);
+                        roleToDevs.put(role, devs);
+                    }
+                } else {
+                    logger.debug("creating group: " + group);
+                    List<String> devs = new ArrayList<>();
+                    devs.add(dev);
+                    HashMap<String, List<String>> roleToDev = new HashMap<>();
+                    roleToDev.put(role, devs);
+                    groupsToRolesWithDevs.put(group, roleToDev);
+                }
             }
         }
     }
@@ -458,12 +575,31 @@ public class MobygamesHelper {
         return String.join(" ", elems);
     }
 
-    private static boolean isEmptyLineInOCR(String[] splitTextByNewline){
-        for (String line : splitTextByNewline){
-            if (line.trim().isEmpty()){
+    private static boolean isEmptyLineInOCR(String[] splitTextByNewline) {
+        for (String line : splitTextByNewline) {
+            if (line.trim().isEmpty()) {
                 return true;
             }
         }
         return false;
+    }
+
+    private static String fullCreditsFormat(Map<String, Map<String, List<String>>> groupsToRolesWithDevs) {
+        StringBuilder builder = new StringBuilder();
+        for (Map.Entry<String, Map<String, List<String>>> groupEntry : groupsToRolesWithDevs.entrySet()) {
+            String group = groupEntry.getKey();
+            builder.append(group).append("\n\n");
+            Map<String, List<String>> roleToDevs = groupEntry.getValue();
+            for (Map.Entry<String, List<String>> roleEntry : roleToDevs.entrySet()) {
+                String role = roleEntry.getKey();
+                List<String> devs = roleEntry.getValue();
+                builder.append(role).append("\n");
+                for (String dev : devs) {
+                    builder.append(dev).append("\n");
+                }
+                builder.append("\n");
+            }
+        }
+        return builder.toString();
     }
 }

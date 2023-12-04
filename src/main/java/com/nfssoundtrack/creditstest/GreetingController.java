@@ -54,6 +54,7 @@ public class GreetingController {
     public ResponseEntity<Map<String, String>> getFullCreditsText(HttpSession session,
                                                                   @RequestParam(value = "pageSegMode", required = false) Integer segMode,
                                                                   @RequestParam(value = "ocrEngineMode", required = false) Integer ocrEngineMode,
+                                                                  @RequestParam(value = "lineSeparator", required = false) String lineSeparator,
                                                                   @RequestParam(value = "tempPropX", required = false) String propX,
                                                                   @RequestParam(value = "tempPropY", required = false) String propY,
                                                                   @RequestParam(value = "tempPropW", required = false) String propW,
@@ -138,10 +139,13 @@ public class GreetingController {
                             capitalizeDevNames, capitalizeRoles, uppercaseKeywords);
                 } else if (roleDevLayout == 1) {
                     allResults = MobygamesHelper.reworkResultDevNext(resultsPerFile, twoWordNames, nicknameDetect,
-                            capitalizeDevNames, capitalizeRoles, uppercaseKeywords, true);
+                            capitalizeDevNames, capitalizeRoles, uppercaseKeywords, true, lineSeparator);
                 } else if (roleDevLayout == 2) {
                     allResults = MobygamesHelper.reworkResultDevNext(resultsPerFile, twoWordNames, nicknameDetect,
-                            capitalizeDevNames, capitalizeRoles, uppercaseKeywords, false);
+                            capitalizeDevNames, capitalizeRoles, uppercaseKeywords, false, lineSeparator);
+                } else if (roleDevLayout == 3) {
+                    allResults = MobygamesHelper.reworkResultDevNextFulLCredits(resultsPerFile, twoWordNames, nicknameDetect,
+                            capitalizeDevNames, capitalizeRoles, uppercaseKeywords, false, lineSeparator);
                 }
                 if (logger.isDebugEnabled()) {
                     logger.debug("returning to page");
@@ -177,6 +181,7 @@ public class GreetingController {
                                                    @RequestParam("filename") String filename,
                                                    @RequestParam(value = "pageSegMode", required = false) Integer segMode,
                                                    @RequestParam(value = "ocrEngineMode", required = false) Integer ocrEngineMode,
+                                                   @RequestParam(value = "lineSeparator", required = false) String lineSeparator,
                                                    @RequestParam(value = "tempPropX", required = false) String propX,
                                                    @RequestParam(value = "tempPropY", required = false) String propY,
                                                    @RequestParam(value = "tempPropW", required = false) String propW,
@@ -241,10 +246,10 @@ public class GreetingController {
                             capitalizeDevNames, capitalizeRoles, uppercaseKeywords);
                 } else if (roleDevLayout == 1) {
                     allResults = MobygamesHelper.reworkResultDevNext(resultsPerFile, twoWordNames, nicknameDetect,
-                            capitalizeDevNames, capitalizeRoles, uppercaseKeywords, true);
+                            capitalizeDevNames, capitalizeRoles, uppercaseKeywords, true, lineSeparator);
                 } else if (roleDevLayout == 2) {
                     allResults = MobygamesHelper.reworkResultDevNext(resultsPerFile, twoWordNames, nicknameDetect,
-                            capitalizeDevNames, capitalizeRoles, uppercaseKeywords, false);
+                            capitalizeDevNames, capitalizeRoles, uppercaseKeywords, false, lineSeparator);
                 } else {
                     allResults = new HashMap<>();
                 }
