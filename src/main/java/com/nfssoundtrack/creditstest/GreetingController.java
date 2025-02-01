@@ -413,7 +413,7 @@ public class GreetingController {
                 tesseractInstance.setOcrEngineMode(ocrEngineMode);
             }
         }
-        String result = tesseractInstance.doOCR(img, rectangle);
+        String result = tesseractInstance.doOCR(img,null, Collections.singletonList(rectangle));
         if (logger.isDebugEnabled()) {
             logger.debug("OCR done successfully");
         }
