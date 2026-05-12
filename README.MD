@@ -8,6 +8,7 @@ Using Tesseract for OCRing the screenshots and OpenNLP for "trying-to-detect" na
 
 Well there is a Dockerfile and it provides all the commands necessary to be done in Linux environment. I believe it is also sufficient to just import this stuff via Java IDE like IntelliJ and it should be able to run this thing. 
 
+If still in doubt, check this [little guide doc](OCR%20Mobygames.md) for deploying this thing locally
 ## Example of usage
 
 Check this example for PGA 2K23\
